@@ -20,10 +20,21 @@ async function requestJson(path, options = {}) {
     const result = await response.json();
 
     if (!response.ok) {
-        throw new Error(result.error || "Request failed.");
+        const error = new Error(result.error || "Request failed.");
+        error.status = response.status;
+        throw error;
     }
 
     return result;
+}
+
+function LoadingIndicator({ label }) {
+    return (
+        <span className="loading-indicator" role="status">
+            <span className="spinner" aria-hidden="true" />
+            {label}
+        </span>
+    );
 }
 
 async function requestAnalytics(documentId, analyticsType) {
@@ -52,12 +63,15 @@ async function requestAnalytics(documentId, analyticsType) {
 function App() {
     const [user, setUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
+    const [authError, setAuthError] = useState("");
     const [authMode, setAuthMode] = useState("login");
     const [authForm, setAuthForm] = useState({ userName: "", email: "", password: "" });
     const [authMessage, setAuthMessage] = useState("");
+    const [authSubmitting, setAuthSubmitting] = useState(false);
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState("");
     const [uploading, setUploading] = useState(false);
+    const [analyticsLoading, setAnalyticsLoading] = useState({ assets: false, liabilities: false });
     const [analyticsData, setAnalyticsData] = useState({
         assets: null,
         liabilities: null,
@@ -66,8 +80,18 @@ function App() {
 
     useEffect(() => {
         requestJson("/auth/me")
-            .then(result => setUser(result.user))
-            .catch(() => setUser(null))
+            .then(result => {
+                setAuthError("");
+                setUser(result.user);
+            })
+            .catch(error => {
+                if (error.status === 401) {
+                    setUser(null);
+                    return;
+                }
+
+                setAuthError("We could not check your session. Please refresh and try again.");
+            })
             .finally(() => setAuthLoading(false));
     }, []);
 
@@ -77,7 +101,12 @@ function App() {
 
     async function handleAuthSubmit(event) {
         event.preventDefault();
+        if (authSubmitting) {
+            return;
+        }
+
         setAuthMessage("");
+        setAuthSubmitting(true);
 
         try {
             const result = await requestJson(`/auth/${authMode}`, {
@@ -88,6 +117,8 @@ function App() {
             setAuthForm({ userName: "", email: "", password: "" });
         } catch (error) {
             setAuthMessage(error.message);
+        } finally {
+            setAuthSubmitting(false);
         }
     }
 
@@ -99,7 +130,11 @@ function App() {
     }
 
     if (authLoading) {
-        return <div className="app"><div className="card"><p>Loading your session...</p></div></div>;
+        return <div className="app auth-loading"><div className="card loading-card"><LoadingIndicator label="Loading your session..." /></div></div>;
+    }
+
+    if (authError) {
+        return <div className="app auth-loading"><div className="card loading-card"><div className="status-banner error">{authError}</div></div></div>;
     }
 
     if (!user) {
@@ -123,10 +158,14 @@ function App() {
                             Password
                             <input name="password" type="password" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} />
                         </label>
-                        <button type="submit">{authMode === "login" ? "Login" : "Register"}</button>
+                        <button type="submit" disabled={authSubmitting}>
+                            {authSubmitting ? (
+                                <LoadingIndicator label={authMode === "login" ? "Logging in..." : "Creating account..."} />
+                            ) : authMode === "login" ? "Login" : "Register"}
+                        </button>
                     </form>
                     {authMessage && <div className="status-banner">{authMessage}</div>}
-                    <button className="secondary-button" onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
+                    <button className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
                         {authMode === "login" ? "Create an account" : "Back to login"}
                     </button>
                 </div>
@@ -151,6 +190,7 @@ function App() {
         }
 
         setUploading(true);
+        setAnalyticsLoading({ assets: false, liabilities: false });
         setAnalyticsData({ assets: null, liabilities: null });
         setActiveChart("comparison");
         setMessage("Uploading PDF...");
@@ -177,13 +217,15 @@ function App() {
                 throw new Error("Upload succeeded but no document ID was returned.");
             }
 
-            setMessage("Loading balance sheet analytics...");
+            setMessage("Processing document...");
 
+            setAnalyticsLoading({ assets: true, liabilities: false });
             const analyticsResult = await requestAnalytics(
                 nextDocumentId,
                 "assetsBreakdown"
             );
 
+            setAnalyticsLoading({ assets: false, liabilities: true });
             const liabilitiesResult = await requestAnalytics(
                 nextDocumentId,
                 "liabilitiesBreakdown"
@@ -199,6 +241,7 @@ function App() {
             setMessage("Unable to load balance sheet analytics. Please try again.");
         } finally {
             setUploading(false);
+            setAnalyticsLoading({ assets: false, liabilities: false });
         }
     }
 
@@ -234,7 +277,7 @@ function App() {
                     onClick={handleUpload}
                     disabled={!file || uploading}
                 >
-                    {uploading ? "Processing..." : "Upload PDF"}
+                    {uploading ? <LoadingIndicator label="Uploading PDF..." /> : "Upload PDF"}
                 </button>
 
                 {message && (
@@ -243,7 +286,7 @@ function App() {
                     </div>
                 )}
 
-                {analyticsData.assets && (
+                {(analyticsData.assets || analyticsLoading.assets || analyticsLoading.liabilities) && (
                     <div className="analytics analytics-hero">
                         <div className="analytics-hero-copy">
                             <span className="analytics-eyebrow">Balance Sheet Insights</span>
@@ -281,17 +324,11 @@ function App() {
                         <div className="analytics-hero-stage">
                             <section className="chart-panel chart-panel-featured">
                                 {activeChart === "comparison" ? (
-                                    <AssetsComparisonChart
-                                        analyticsData={analyticsData.assets}
-                                    />
+                                    analyticsLoading.assets ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <AssetsComparisonChart analyticsData={analyticsData.assets} />
                                 ) : activeChart === "breakdown" ? (
-                                    <AssetsBreakdownChart
-                                        analyticsData={analyticsData.assets}
-                                    />
+                                    analyticsLoading.assets ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <AssetsBreakdownChart analyticsData={analyticsData.assets} />
                                 ) : (
-                                    <LiabilitiesBreakdownChart
-                                        analyticsData={analyticsData.liabilities}
-                                    />
+                                    analyticsLoading.liabilities ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <LiabilitiesBreakdownChart analyticsData={analyticsData.liabilities} />
                                 )}
                             </section>
                         </div>

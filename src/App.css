@@ -8,6 +8,36 @@
     font-family: Arial, sans-serif;
 }
 
+.auth-loading {
+    align-items: center;
+}
+
+.loading-card {
+    max-width: 560px;
+    text-align: center;
+}
+
+.loading-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.spinner {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .card {
     width: min(100%, 1440px);
     box-sizing: border-box;
@@ -138,6 +168,12 @@ button:disabled {
     color: #1d4fb4;
 }
 
+.status-banner.error {
+    border-color: #e7b7b7;
+    background: #fff4f4;
+    color: #a12626;
+}
+
 .analytics {
     margin-top: 30px;
     text-align: left;
@@ -217,6 +253,13 @@ button:disabled {
 
 .chart-panel-featured {
     box-shadow: 0 12px 28px rgba(7, 35, 66, 0.2);
+}
+
+.analytics-loading {
+    min-height: 520px;
+    display: grid;
+    place-items: center;
+    color: #1f5fbf;
 }
 
 @media (max-width: 900px) {
