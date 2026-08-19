@@ -37,6 +37,29 @@ function LoadingIndicator({ label }) {
     );
 }
 
+function formatFileSize(bytes) {
+    if (!bytes) return "PDF document";
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function NavIcon({ children }) {
+    return <span className="nav-icon" aria-hidden="true">{children}</span>;
+}
+
+function SectionHeader({ eyebrow, title, description, action }) {
+    return (
+        <div className="section-header">
+            <div>
+                {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+                <h2>{title}</h2>
+                {description && <p>{description}</p>}
+            </div>
+            {action}
+        </div>
+    );
+}
+
 async function requestAnalytics(documentId, analyticsType) {
     console.log(`[ANALYTICS] Starting ${analyticsType} request`, {
         documentId,
@@ -77,6 +100,7 @@ function App() {
         liabilities: null,
     });
     const [activeChart, setActiveChart] = useState("comparison");
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
     useEffect(() => {
         requestJson("/auth/me")
@@ -130,19 +154,26 @@ function App() {
     }
 
     if (authLoading) {
-        return <div className="app auth-loading"><div className="card loading-card"><LoadingIndicator label="Loading your session..." /></div></div>;
+        return <div className="app auth-loading"><div className="loading-card"><div className="brand-mark">FA</div><LoadingIndicator label="Loading your workspace..." /></div></div>;
     }
 
     if (authError) {
-        return <div className="app auth-loading"><div className="card loading-card"><div className="status-banner error">{authError}</div></div></div>;
+        return <div className="app auth-loading"><div className="loading-card"><div className="status-banner error">{authError}</div></div></div>;
     }
 
     if (!user) {
         return (
             <div className="app auth-app">
-                <div className="card auth-card">
-                    <h1>Financial Analyzer</h1>
-                    <p>{authMode === "login" ? "Sign in to analyze your financial documents." : "Create an account to get started."}</p>
+                <div className="auth-visual">
+                    <div className="brand-lockup"><span className="brand-mark">FA</span><strong>Financial Analyzer</strong></div>
+                    <div className="auth-visual-copy"><span className="eyebrow">Financial intelligence</span><h1>Clarity for every number.</h1><p>Turn financial reports into decisions with a focused workspace for analysis.</p></div>
+                    <div className="auth-signal"><span className="signal-dot" /> Secure document analysis</div>
+                </div>
+                <div className="auth-panel">
+                    <div className="auth-card">
+                        <span className="eyebrow">Welcome back</span>
+                        <h2>{authMode === "login" ? "Sign in to your workspace" : "Create your workspace"}</h2>
+                        <p>{authMode === "login" ? "Access your financial analysis dashboard." : "Start turning reports into useful insight."}</p>
                     <form onSubmit={handleAuthSubmit} className="auth-form">
                         {authMode === "register" && (
                             <label>
@@ -158,16 +189,17 @@ function App() {
                             Password
                             <input name="password" type="password" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} />
                         </label>
-                        <button type="submit" disabled={authSubmitting}>
+                        <button className="primary-button" type="submit" disabled={authSubmitting}>
                             {authSubmitting ? (
                                 <LoadingIndicator label={authMode === "login" ? "Logging in..." : "Creating account..."} />
                             ) : authMode === "login" ? "Login" : "Register"}
                         </button>
                     </form>
-                    {authMessage && <div className="status-banner">{authMessage}</div>}
+                    {authMessage && <div className="status-banner error">{authMessage}</div>}
                     <button className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
                         {authMode === "login" ? "Create an account" : "Back to login"}
                     </button>
+                    </div>
                 </div>
             </div>
         );
@@ -245,56 +277,63 @@ function App() {
         }
     }
 
+    function handleDrop(event) {
+        event.preventDefault();
+        if (!uploading) {
+            const droppedFile = event.dataTransfer.files[0];
+            if (droppedFile?.type === "application/pdf") {
+                setFile(droppedFile);
+                setMessage("");
+                setAnalyticsData({ assets: null, liabilities: null });
+            } else if (droppedFile) {
+                setMessage("Please choose a PDF financial report.");
+            }
+        }
+    }
+
     return (
-        <div className="app">
-            <div className="card">
-                <div className="app-header">
-                    <div>
-                        <h1>Financial Analyzer</h1>
-                        <p>Upload a financial PDF to analyze it.</p>
-                    </div>
-                    <div className="account-controls">
-                        <span>{user.userName} ({user.email})</span>
-                        <button onClick={handleLogout} className="logout-button">Logout</button>
-                    </div>
-                </div>
-
-                <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={handleFileChange}
-                    disabled={uploading}
-                />
-
-                {file && (
-                    <div className="selected-file">
-                        Selected file:
-                        <strong>{file.name}</strong>
-                    </div>
-                )}
-
-                <button
-                    onClick={handleUpload}
-                    disabled={!file || uploading}
-                >
-                    {uploading ? <LoadingIndicator label="Uploading PDF..." /> : "Upload PDF"}
-                </button>
-
-                {message && (
-                    <div className={`status-banner ${uploading ? "loading" : "info"}`}>
-                        {message}
-                    </div>
-                )}
-
-                {(analyticsData.assets || analyticsLoading.assets || analyticsLoading.liabilities) && (
-                    <div className="analytics analytics-hero">
-                        <div className="analytics-hero-copy">
-                            <span className="analytics-eyebrow">Balance Sheet Insights</span>
-                            <h2>Assets at a glance</h2>
-                            <p>Explore the balance sheet one view at a time.</p>
+        <div className="app workspace-app">
+            {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
+            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation">Close</button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#documents" onClick={() => setMobileNavOpen(false)}>Documents</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a></nav>}
+            <aside className="sidebar">
+                <div className="brand-lockup"><span className="brand-mark">FA</span><strong>Financial<br />Analyzer</strong></div>
+                <div className="sidebar-label">Workspace</div>
+                <nav className="main-nav" aria-label="Main navigation">
+                    <a className="nav-item is-active" href="#dashboard"><NavIcon>+</NavIcon>Dashboard</a>
+                    <a className="nav-item" href="#documents"><NavIcon>[]</NavIcon>Documents</a>
+                    <a className="nav-item" href="#analytics"><NavIcon>~</NavIcon>Analytics</a>
+                </nav>
+                <div className="sidebar-footer"><div className="sidebar-label">Account</div><button className="nav-item nav-button" onClick={handleLogout}><NavIcon>&gt;</NavIcon>Log out</button></div>
+            </aside>
+            <main className="workspace-main">
+                <header className="topbar">
+                    <button className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen}>Menu</button>
+                    <div><span className="topbar-kicker">Workspace / Overview</span><h1>Dashboard</h1></div>
+                    <div className="account-controls"><div className="avatar">{String(user.userName || "U").slice(0, 1).toUpperCase()}</div><div className="account-copy"><strong>{user.userName}</strong><span>{user.email}</span></div><button onClick={handleLogout} className="logout-button">Log out</button></div>
+                </header>
+                <div className="content-grid" id="dashboard">
+                    <section className="welcome-panel">
+                        <div><span className="eyebrow">Financial intelligence</span><h2>Your numbers, in focus.</h2><p>Upload a financial report to generate a clear balance sheet view.</p></div>
+                        <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
+                    </section>
+                    <section className="kpi-grid" aria-label="Workspace summary">
+                        <div className="kpi-card"><span className="kpi-label">Reports analyzed</span><strong>{file ? "1" : "0"}</strong><span className="kpi-foot">In this session</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsData.assets ? "status-positive" : ""}>{analyticsData.assets ? "Ready" : uploading ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Latest report</span><strong>{file ? formatFileSize(file.size) : "--"}</strong><span className="kpi-foot">PDF document</span></div>
+                    </section>
+                    <section className="upload-section" id="documents">
+                        <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
+                        <div className={`upload-zone ${file ? "has-file" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
+                            <input id="file-upload" className="file-input" type="file" accept=".pdf,application/pdf" onChange={handleFileChange} disabled={uploading} />
+                            <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{file ? file.name : "Drop your report here"}</strong><span>{file ? `${formatFileSize(file.size)} · PDF selected` : "or browse from your device"}</span><small>PDF files up to 25 MB</small></label>
                         </div>
-
-                        <div className="analytics-switcher" role="tablist" aria-label="Financial analytics views">
+                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!file || uploading}>{uploading ? <LoadingIndicator label="Processing report..." /> : "Analyze report"}</button>{file && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
+                        {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
+                    </section>
+                    <section className="analytics-section" id="analytics">
+                        <SectionHeader eyebrow="Insights" title="Balance sheet analytics" description="Explore the financial story in your latest uploaded report." />
+                        {(analyticsData.assets || analyticsLoading.assets || analyticsLoading.liabilities) ? <>
+                        <div className="analytics-tabs" role="tablist" aria-label="Financial analytics views">
                             <button
                                 className={activeChart === "comparison" ? "is-active" : ""}
                                 onClick={() => setActiveChart("comparison")}
@@ -319,10 +358,7 @@ function App() {
                             >
                                 Liabilities {getValidYears(analyticsData.liabilities)[0] || "Latest"}
                             </button>
-                        </div>
-
-                        <div className="analytics-hero-stage">
-                            <section className="chart-panel chart-panel-featured">
+                        </div><section className="chart-panel chart-panel-featured">
                                 {activeChart === "comparison" ? (
                                     analyticsLoading.assets ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <AssetsComparisonChart analyticsData={analyticsData.assets} />
                                 ) : activeChart === "breakdown" ? (
@@ -330,11 +366,11 @@ function App() {
                                 ) : (
                                     analyticsLoading.liabilities ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <LiabilitiesBreakdownChart analyticsData={analyticsData.liabilities} />
                                 )}
-                            </section>
-                        </div>
-                    </div>
-                )}
-            </div>
+                        </section></> : <div className="empty-state"><div className="empty-icon">/</div><strong>Your insights will appear here</strong><p>Upload a report above to see assets, liabilities, and year-over-year comparisons.</p></div>}
+                    </section>
+                </div>
+                <footer className="workspace-footer">Financial Analyzer <span>Private workspace</span></footer>
+            </main>
         </div>
     );
 }
