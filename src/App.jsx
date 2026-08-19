@@ -43,20 +43,6 @@ function formatFileSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDocumentDate(value) {
-    if (!value) return "Date unavailable";
-
-    return new Intl.DateTimeFormat(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-    }).format(new Date(value));
-}
-
-function documentStatusLabel(status) {
-    return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown";
-}
-
 function NavIcon({ children }) {
     return <span className="nav-icon" aria-hidden="true">{children}</span>;
 }
@@ -117,7 +103,6 @@ function App() {
     const [activeDocumentId, setActiveDocumentId] = useState(null);
     const [documentsLoading, setDocumentsLoading] = useState(false);
     const [activeChart, setActiveChart] = useState("comparison");
-    const [insightsOpen, setInsightsOpen] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const analyticsRequestRef = useRef(0);
 
@@ -260,7 +245,6 @@ function App() {
                         {authMode === "register" && (
                             <label>
                                 Name
-                                <input name="userName" value={authForm.userName} onChange={updateAuthField} required minLength="2" />
                             </label>
                         )}
                         <label>
@@ -392,7 +376,15 @@ function App() {
                 <header className="topbar">
                     <button className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen}>Menu</button>
                     <div><span className="topbar-kicker">Workspace / Overview</span><h1>Dashboard</h1></div>
-                    <div className="account-controls"><div className="avatar">{String(user.userName || "U").slice(0, 1).toUpperCase()}</div><div className="account-copy"><strong>{user.userName}</strong><span>{user.email}</span></div><button onClick={handleLogout} className="logout-button">Log out</button></div>
+                    <div className="topbar-actions">
+                        <label className="document-selector" id="documents">
+                            <span>Current document</span>
+                            <select value={activeDocumentId ?? ""} onChange={event => { const selectedDocument = documents.find(document => String(document.id) === event.target.value); if (selectedDocument) handleDocumentSelect(selectedDocument.id); }} disabled={documentsLoading || documents.length === 0}>
+                                {documents.length === 0 ? <option value="">No documents yet</option> : documents.map(document => <option key={document.id} value={document.id}>{document.original_filename}</option>)}
+                            </select>
+                        </label>
+                        <div className="account-controls"><div className="avatar">{String(user.userName || "U").slice(0, 1).toUpperCase()}</div><div className="account-copy"><strong>{user.userName}</strong><span>{user.email}</span></div><button onClick={handleLogout} className="logout-button">Log out</button></div>
+                    </div>
                 </header>
                 <div className="content-grid" id="dashboard">
                     <section className="welcome-panel">
@@ -413,13 +405,9 @@ function App() {
                         <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!file || uploading}>{uploading ? <LoadingIndicator label="Processing report..." /> : "Analyze report"}</button>{file && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
                         {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
-                    <div className="history-insights-layout">
-                        <aside className={`insights-rail ${insightsOpen ? "is-open" : ""}`} id="analytics">
-                            <button className="insights-toggle" onClick={() => setInsightsOpen(open => !open)} aria-expanded={insightsOpen} aria-controls="insights-content">
-                                <span><span className="eyebrow">Insights</span><strong>Balance sheet analytics</strong></span>
-                                <span className="insights-chevron" aria-hidden="true">⌄</span>
-                            </button>
-                            {insightsOpen && <div className="insights-content" id="insights-content">
+                    <section className="insights-section" id="analytics">
+                        <SectionHeader eyebrow="Insights" title="Balance sheet analytics" description="Explore the financial story in your selected report." />
+                        <div className="insights-content" id="insights-content">
                                 <p>Explore the financial story in your selected report.</p>
                                 {(analyticsData.assets || analyticsLoading.assets || analyticsLoading.liabilities) ? <>
                         <div className="analytics-tabs" role="tablist" aria-label="Financial analytics views">
@@ -456,21 +444,8 @@ function App() {
                                     analyticsLoading.liabilities ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <LiabilitiesBreakdownChart analyticsData={analyticsData.liabilities} />
                                 )}
                         </section></> : <div className="empty-state"><div className="empty-icon">/</div><strong>Your insights will appear here</strong><p>Upload a report above to see assets, liabilities, and year-over-year comparisons.</p></div>}
-                            </div>}
-                        </aside>
-                        <section className="documents-section" id="documents">
-                            <SectionHeader eyebrow="Document history" title="My documents" description="Every report stays available for review." />
-                            {documentsLoading ? <div className="document-list-loading"><LoadingIndicator label="Loading documents..." /></div> : documents.length === 0 ? <div className="empty-state"><strong>No documents yet</strong><p>Upload your first financial report to begin.</p></div> : <>
-                                <div className="current-document"><span className="eyebrow">Currently selected</span><strong>{documents.find(document => document.id === activeDocumentId)?.original_filename}</strong></div>
-                                <div className="document-list" aria-label="My documents">
-                                    {documents.map((document, index) => <button key={document.id} className={`document-row ${document.id === activeDocumentId ? "is-selected" : ""}`} onClick={() => handleDocumentSelect(document.id)} aria-pressed={document.id === activeDocumentId}>
-                                        <span className="document-row-main"><strong>{document.original_filename}</strong><span>Uploaded {formatDocumentDate(document.linked_at || document.uploaded_at)} · {documentStatusLabel(document.extraction_status)}</span></span>
-                                        <span className="document-row-badges">{index === 0 && <em>Latest</em>}{document.id === activeDocumentId && <small>Selected</small>}</span>
-                                    </button>)}
-                                </div>
-                            </>}
-                        </section>
-                    </div>
+                        </div>
+                    </section>
                 </div>
                 <footer className="workspace-footer">Financial Analyzer <span>Private workspace</span></footer>
             </main>

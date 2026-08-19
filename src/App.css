@@ -37,6 +37,10 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 96px; padding: 24px clamp(24px, 4vw, 60px); background: var(--surface); border-bottom: 1px solid var(--line); }
 .topbar-kicker, .eyebrow { display: block; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
 .topbar h1 { margin: 3px 0 0; color: var(--ink); font-size: 24px; font-weight: 700; letter-spacing: -.5px; }
+.topbar-actions { display: flex; align-items: center; gap: 22px; min-width: 0; }
+.document-selector { display: grid; gap: 5px; min-width: min(260px, 30vw); color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+.document-selector select { width: 100%; min-width: 0; padding: 8px 30px 8px 10px; border: 1px solid var(--line); border-radius: 6px; outline: 0; background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.document-selector select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(23,105,212,.1); }
 .account-controls { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #dce9f8; color: var(--accent-dark); font-size: 13px; font-weight: 800; }
 .account-copy { display: grid; gap: 1px; min-width: 0; }
@@ -67,15 +71,8 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .section-header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .section-header h2 { margin: 5px 0 4px; color: var(--ink); font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
 .upload-section, .analytics-section { scroll-margin-top: 20px; }
-.documents-section { scroll-margin-top: 20px; }
-.history-insights-layout { display: grid; grid-template-columns: minmax(220px, 250px) minmax(0, 1fr); gap: 28px; align-items: start; }
-.insights-rail { position: sticky; top: 20px; scroll-margin-top: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
-.insights-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 17px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; }
-.insights-toggle:hover, .insights-rail.is-open .insights-toggle { background: var(--accent-soft); }
-.insights-toggle strong { display: block; margin-top: 5px; font-size: 13px; }
-.insights-chevron { color: var(--accent); font-size: 18px; line-height: 1; transition: transform .2s; }
-.insights-rail.is-open .insights-chevron { transform: rotate(180deg); }
-.insights-content { padding: 0 17px 17px; }
+.insights-section { scroll-margin-top: 20px; }
+.insights-content { padding: 0; }
 .insights-content > p { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .insights-content .analytics-tabs { width: 100%; overflow: hidden; flex-direction: column; }
 .insights-content .analytics-tabs button { width: 100%; text-align: left; }
@@ -166,7 +163,8 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
     .topbar { padding-inline: 22px; }
     .content-grid { padding-inline: 22px; }
     .workspace-footer { padding-inline: 22px; }
-    .history-insights-layout { grid-template-columns: 210px minmax(0, 1fr); gap: 20px; }
+    .topbar-actions { gap: 14px; }
+    .document-selector { min-width: 190px; }
 }
 @media (max-width: 600px) {
     .sidebar { display: none; }
@@ -175,8 +173,8 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
     .topbar h1 { font-size: 20px; }
     .account-copy, .logout-button { display: none; }
     .content-grid { gap: 22px; padding: 22px 16px 42px; }
-    .history-insights-layout { grid-template-columns: 1fr; gap: 22px; }
-    .insights-rail { position: static; }
+    .topbar-actions { flex: 1; justify-content: flex-end; }
+    .document-selector { min-width: 0; max-width: 190px; }
     .welcome-panel { min-height: 160px; padding: 24px; }
     .welcome-mark { display: none; }
     .kpi-grid { grid-template-columns: 1fr; gap: 9px; }
