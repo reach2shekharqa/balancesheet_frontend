@@ -26,6 +26,73 @@
     color: #666;
 }
 
+.auth-card {
+    max-width: 560px;
+    margin: auto;
+}
+
+.auth-form {
+    display: grid;
+    gap: 16px;
+    text-align: left;
+}
+
+.auth-form label {
+    display: grid;
+    gap: 6px;
+    color: #3f4854;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.auth-form input {
+    margin: 0;
+    padding: 12px;
+    border: 1px solid #cfd6df;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.secondary-button {
+    margin-top: 12px;
+    background: transparent;
+    color: #1f5fbf;
+    border: 1px solid #1f5fbf;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.account-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #4d5866;
+    font-size: 14px;
+    text-align: right;
+}
+
+.logout-button {
+    width: auto;
+    padding: 8px 12px;
+}
+
+@media (max-width: 700px) {
+    .app-header,
+    .account-controls {
+        flex-direction: column;
+    }
+
+    .account-controls {
+        align-items: flex-start;
+        text-align: left;
+    }
+}
+
 input {
     width: 100%;
     margin-bottom: 20px;

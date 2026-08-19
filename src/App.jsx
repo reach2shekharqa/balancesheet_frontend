@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
@@ -6,7 +6,25 @@ import AssetsComparisonChart from "./components/AssetsComparisonChart";
 import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
 import { getValidYears } from "./utils/analyticsData";
 
-const API_BASE_URL = "https://balancesheet-backend-n2mz.onrender.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+
+async function requestJson(path, options = {}) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        credentials: "include",
+        headers: {
+            ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+            ...options.headers,
+        },
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+        throw new Error(result.error || "Request failed.");
+    }
+
+    return result;
+}
 
 async function requestAnalytics(documentId, analyticsType) {
     console.log(`[ANALYTICS] Starting ${analyticsType} request`, {
@@ -14,34 +32,29 @@ async function requestAnalytics(documentId, analyticsType) {
         analyticsType,
     });
 
-    const response = await fetch(
-        `${API_BASE_URL}/documents/${documentId}/analytics`,
+    const result = await requestJson(
+        `/documents/${documentId}/analytics`,
         {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
             body: JSON.stringify({ analyticsType }),
         }
     );
 
-    const result = await response.json();
-
     console.log(`[ANALYTICS] ${analyticsType} response`, {
-        status: response.status,
-        ok: response.ok,
+        ok: true,
         result,
     });
-
-    if (!response.ok) {
-        throw new Error(result.error || `${analyticsType} request failed.`);
-    }
 
     return result;
 }
 
 
 function App() {
+    const [user, setUser] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [authMode, setAuthMode] = useState("login");
+    const [authForm, setAuthForm] = useState({ userName: "", email: "", password: "" });
+    const [authMessage, setAuthMessage] = useState("");
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState("");
     const [uploading, setUploading] = useState(false);
@@ -50,6 +63,76 @@ function App() {
         liabilities: null,
     });
     const [activeChart, setActiveChart] = useState("comparison");
+
+    useEffect(() => {
+        requestJson("/auth/me")
+            .then(result => setUser(result.user))
+            .catch(() => setUser(null))
+            .finally(() => setAuthLoading(false));
+    }, []);
+
+    function updateAuthField(event) {
+        setAuthForm(current => ({ ...current, [event.target.name]: event.target.value }));
+    }
+
+    async function handleAuthSubmit(event) {
+        event.preventDefault();
+        setAuthMessage("");
+
+        try {
+            const result = await requestJson(`/auth/${authMode}`, {
+                method: "POST",
+                body: JSON.stringify(authForm),
+            });
+            setUser(result.user);
+            setAuthForm({ userName: "", email: "", password: "" });
+        } catch (error) {
+            setAuthMessage(error.message);
+        }
+    }
+
+    async function handleLogout() {
+        await requestJson("/auth/logout", { method: "POST" });
+        setUser(null);
+        setFile(null);
+        setAnalyticsData({ assets: null, liabilities: null });
+    }
+
+    if (authLoading) {
+        return <div className="app"><div className="card"><p>Loading your session...</p></div></div>;
+    }
+
+    if (!user) {
+        return (
+            <div className="app auth-app">
+                <div className="card auth-card">
+                    <h1>Financial Analyzer</h1>
+                    <p>{authMode === "login" ? "Sign in to analyze your financial documents." : "Create an account to get started."}</p>
+                    <form onSubmit={handleAuthSubmit} className="auth-form">
+                        {authMode === "register" && (
+                            <label>
+                                Name
+                                <input name="userName" value={authForm.userName} onChange={updateAuthField} required minLength="2" />
+                            </label>
+                        )}
+                        <label>
+                            Email
+                            <input name="email" type="email" value={authForm.email} onChange={updateAuthField} required autoComplete="email" />
+                        </label>
+                        <label>
+                            Password
+                            <input name="password" type="password" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} />
+                        </label>
+                        <button type="submit">{authMode === "login" ? "Login" : "Register"}</button>
+                    </form>
+                    {authMessage && <div className="status-banner">{authMessage}</div>}
+                    <button className="secondary-button" onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
+                        {authMode === "login" ? "Create an account" : "Back to login"}
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
 
     function handleFileChange(event) {
@@ -75,11 +158,11 @@ function App() {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            formData.append("userId", "admin");
 
-            const uploadResponse = await fetch("https://balancesheet-backend-n2mz.onrender.com/api/documents/upload", {
+            const uploadResponse = await fetch(`${API_BASE_URL}/documents/upload`, {
                 method: "POST",
                 body: formData,
+                credentials: "include",
             });
 
             const uploadResult = await uploadResponse.json();
@@ -122,8 +205,16 @@ function App() {
     return (
         <div className="app">
             <div className="card">
-                <h1>Financial Analyzer</h1>
-                <p>Upload a financial PDF to analyze it.</p>
+                <div className="app-header">
+                    <div>
+                        <h1>Financial Analyzer</h1>
+                        <p>Upload a financial PDF to analyze it.</p>
+                    </div>
+                    <div className="account-controls">
+                        <span>{user.userName} ({user.email})</span>
+                        <button onClick={handleLogout} className="logout-button">Logout</button>
+                    </div>
+                </div>
 
                 <input
                     type="file"
