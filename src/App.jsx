@@ -37,6 +37,58 @@ function LoadingIndicator({ label }) {
     );
 }
 
+function formatMarketNumber(value, suffix = "") {
+    const number = Number(value);
+    return Number.isFinite(number) ? `${number.toFixed(2)}${suffix}` : "--";
+}
+
+function MarketTicker() {
+    const [stocks, setStocks] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        requestJson("/market/trending")
+            .then(result => {
+                if (!cancelled) setStocks(result.stocks ?? []);
+            })
+            .catch(() => {
+                if (!cancelled) setStocks([]);
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    if (loading || stocks.length === 0) {
+        return null;
+    }
+
+    return (
+        <section className="market-ticker" aria-label="Trending stocks">
+            <div className="market-ticker-track">
+                {[...stocks, ...stocks].map((stock, index) => {
+                    const isPositive = Number(stock.changePercent) >= 0;
+                    return (
+                        <div className="market-ticker-item" key={`${stock.symbol}-${index}`}>
+                            <strong>{stock.symbol}</strong>
+                            <span>{formatMarketNumber(stock.price)}</span>
+                            <em className={isPositive ? "is-positive" : "is-negative"}>
+                                {isPositive ? "+" : ""}{formatMarketNumber(stock.changePercent, "%")}
+                            </em>
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
 function formatFileSize(bytes) {
     if (!bytes) return "PDF document";
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -246,7 +298,8 @@ function App() {
                     <div className="auth-signal"><span className="signal-dot" /> Secure document analysis</div>
                 </div>
                 <div className="auth-panel">
-                    <div className="auth-card">
+                    <div className="auth-panel-content">
+                        <div className="auth-card">
                         <span className="eyebrow">Welcome back</span>
                         <h2>{authMode === "login" ? "Sign in to your workspace" : "Create your workspace"}</h2>
                         <p>{authMode === "login" ? "Access your financial analysis dashboard." : "Start turning reports into useful insight."}</p>
@@ -274,6 +327,8 @@ function App() {
                     <button className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
                         {authMode === "login" ? "Create an account" : "Back to login"}
                     </button>
+                        </div>
+                        <MarketTicker />
                     </div>
                 </div>
             </div>

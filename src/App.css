@@ -185,6 +185,7 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .auth-visual-copy p { max-width: 360px; color: var(--muted); font-size: 15px; line-height: 1.6; }
 .auth-signal { color: var(--muted); font-size: 11px; }
 .auth-panel { display: grid; place-items: center; padding: 40px; }
+.auth-panel-content { width: min(100%, 350px); }
 .auth-card { width: min(100%, 350px); }
 .auth-card h2 { margin: 9px 0 7px; color: var(--ink); font-size: 25px; line-height: 1.15; }
 .auth-card > p { margin: 0 0 29px; color: var(--muted); font-size: 13px; }
@@ -194,6 +195,15 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .auth-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(23,105,212,.1); }
 .auth-form .primary-button { width: 100%; margin-top: 5px; }
 .secondary-button { width: 100%; margin-top: 20px; padding: 10px; border: 0; background: transparent; color: var(--accent); font-size: 12px; font-weight: 700; }
+.market-ticker { width: 100vw; max-width: 350px; margin-top: 34px; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fbfcfd; }
+.market-ticker-track { display: flex; width: max-content; animation: ticker-scroll 28s linear infinite; }
+.market-ticker-item { display: flex; align-items: baseline; gap: 8px; min-width: 170px; padding: 11px 18px; border-right: 1px solid var(--line); font-size: 10px; white-space: nowrap; }
+.market-ticker-item strong { color: var(--ink); font-size: 11px; }
+.market-ticker-item span { color: var(--muted); }
+.market-ticker-item em { font-style: normal; font-weight: 800; }
+.market-ticker-item .is-positive { color: var(--success); }
+.market-ticker-item .is-negative { color: var(--danger); }
+@keyframes ticker-scroll { to { transform: translateX(-50%); } }
 .auth-loading { display: grid; place-items: center; background: var(--canvas); }
 .loading-card { display: grid; justify-items: center; gap: 15px; color: var(--muted); font-size: 12px; }
 .loading-card .brand-mark { background: var(--accent); }
@@ -247,4 +257,7 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
     .auth-visual-copy h1 { font-size: 42px; letter-spacing: -2px; }
     .auth-signal { display: none; }
     .auth-panel { padding: 42px 24px; }
+    .auth-panel-content { width: 100%; }
+    .auth-card { width: 100%; }
+    .market-ticker { max-width: none; }
 }
