@@ -23,47 +23,39 @@ function AssetsComparisonChart({ analyticsData }) {
     }
 
     const option = {
-        title: {
-            text: `Assets Comparison - ${latestYear ?? "Latest"} vs ${previousYear ?? "Previous"}`,
-            left: "center",
-        },
+        title: { text: "Assets comparison", subtext: `${latestYear ?? "Latest"} vs ${previousYear ?? "Previous"}`, left: 20, top: 18, textStyle: { fontSize: 17, fontWeight: 700, color: "#17212b" }, subtextStyle: { color: "#71808e", fontSize: 12 } },
         tooltip: {
             trigger: "axis",
             axisPointer: { type: "shadow" },
         },
         legend: {
-            top: 32,
+            top: 22,
+            right: 20,
             data: [latestYear, previousYear].filter(Boolean),
         },
         grid: {
-            left: 24,
+            left: 150,
             right: 24,
-            bottom: 100,
+            top: 82,
+            bottom: 26,
             containLabel: true,
         },
-        xAxis: {
-            type: "category",
-            data: comparisonData.map(item => item.name),
-            axisLabel: {
-                interval: 0,
-                rotate: 30,
-            },
-        },
-        yAxis: {
-            type: "value",
-        },
+        xAxis: { type: "value", splitLine: { lineStyle: { color: "#edf0f3" } }, axisLabel: { color: "#71808e", formatter: value => Number(value).toLocaleString("en-IN") } },
+        yAxis: { type: "category", data: comparisonData.map(item => item.name), axisLabel: { color: "#4e5d6b", width: 130, overflow: "truncate" } },
         series: [
             {
                 name: latestYear,
                 type: "bar",
                 data: comparisonData.map(item => item.latestValue),
-                itemStyle: { color: "#1f5fbf" },
+                barMaxWidth: 16,
+                itemStyle: { color: "#1769d4" },
             },
             {
                 name: previousYear,
                 type: "bar",
                 data: comparisonData.map(item => item.previousValue),
-                itemStyle: { color: "#f08a24" },
+                barMaxWidth: 16,
+                itemStyle: { color: "#8ca8c5" },
             },
         ],
     };
@@ -72,7 +64,7 @@ function AssetsComparisonChart({ analyticsData }) {
         <div className="assets-chart">
             <ReactECharts
                 option={option}
-                style={{ height: "520px", width: "100%" }}
+                style={{ height: `${Math.max(420, comparisonData.length * 48 + 110)}px`, width: "100%" }}
                 notMerge={true}
                 lazyUpdate={false}
             />
