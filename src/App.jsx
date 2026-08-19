@@ -6,7 +6,7 @@ import AssetsComparisonChart from "./components/AssetsComparisonChart";
 import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
 import { getValidYears } from "./utils/analyticsData";
 
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = "https://balancesheet-backend-n2mz.onrender.com/api";
 
 async function requestAnalytics(documentId, analyticsType) {
     console.log(`[ANALYTICS] Starting ${analyticsType} request`, {
@@ -77,7 +77,7 @@ function App() {
             formData.append("file", file);
             formData.append("userId", "admin");
 
-            const uploadResponse = await fetch("http://localhost:3000/api/documents/upload", {
+            const uploadResponse = await fetch("https://balancesheet-backend-n2mz.onrender.com/api/documents/upload", {
                 method: "POST",
                 body: formData,
             });
@@ -212,3 +212,4 @@ function App() {
 }
 
 export default App;
+
