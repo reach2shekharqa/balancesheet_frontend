@@ -30,6 +30,26 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; text-align: left; }
 .nav-item:hover, .nav-item.is-active { background: var(--accent-soft); color: var(--accent-dark); }
 .nav-icon { display: grid; place-items: center; width: 20px; height: 20px; color: currentColor; font-size: 17px; font-weight: 400; }
+.report-history-toggle { position: relative; }
+.report-history-toggle .nav-chevron { margin-left: auto; color: var(--subtle); font-size: 12px; }
+.sidebar-report-history { position: relative; margin: 4px 0 8px; padding: 14px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 6px 18px rgba(23,33,43,.05); }
+.sidebar-report-history .history-heading { align-items: center; }
+.sidebar-report-history .history-heading h3 { font-size: 14px; }
+.sidebar-report-history .eyebrow { font-size: 8px; }
+.sidebar-report-history .history-count { min-width: 21px; height: 21px; font-size: 10px; }
+.sidebar-report-history .report-selector { margin-top: 14px; padding: 9px 8px; font-size: 11px; }
+.sidebar-report-history .report-menu { top: 91px; right: 10px; left: 10px; }
+.sidebar-report-history .history-list { max-height: 240px; margin-top: 10px; }
+.sidebar-report-history .history-item { padding: 9px 7px; }
+.sidebar-report-history .history-item-copy strong { font-size: 10px; }
+.sidebar-report-history .history-item-copy small { font-size: 9px; }
+.sidebar-report-history .history-empty { margin-top: 18px; }
+.sidebar-report-history .history-empty strong { font-size: 11px; }
+.sidebar-report-history .history-empty p, .sidebar-report-history .history-empty a { font-size: 10px; }
+.mobile-report-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; text-align: left; }
+.mobile-report-history { padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.mobile-report-history .history-list { max-height: 260px; margin-top: 0; }
+.mobile-report-history .history-item { padding: 10px 4px; }
 .sidebar-footer { margin-top: auto; }
 .sidebar-footer .sidebar-label { margin: 0 12px 12px; }
 .nav-button { color: var(--muted); }
@@ -102,11 +122,6 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .insight-workspace-main { min-width: 0; padding: 30px clamp(22px, 3vw, 42px) 36px; }
 .analysis-ready { display: inline-flex; align-items: center; gap: 7px; color: var(--success); font-size: 11px; font-weight: 800; white-space: nowrap; }
 .analysis-ready i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
-.insight-kpis { display: grid; grid-template-columns: repeat(5, minmax(100px, 1fr)); gap: 9px; margin-bottom: 22px; }
-.insight-kpi { display: grid; gap: 7px; min-height: 100px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfd; }
-.insight-kpi span, .insight-kpi small { color: var(--muted); font-size: 10px; }
-.insight-kpi strong { font-size: 17px; letter-spacing: -.3px; }
-.insight-kpi small { color: var(--subtle); }
 .insight-workspace-main .analytics-tabs { margin-bottom: 14px; }
 .insight-workspace-main .chart-panel { min-height: 420px; }
 .insight-workspace-main .analytics-loading { min-height: 420px; }
@@ -224,8 +239,6 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
     .insights-workspace { min-height: 0; }
     .history-list { max-height: 220px; }
     .insight-workspace-main { padding: 24px 16px 28px; }
-    .insight-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .insight-kpi:last-child { grid-column: span 2; }
     .auth-app { display: block; }
     .auth-visual { min-height: 250px; padding: 26px 24px; }
     .auth-visual-copy { margin-top: 42px; }

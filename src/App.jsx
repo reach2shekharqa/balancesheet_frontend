@@ -4,7 +4,7 @@ import "./App.css";
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
 import AssetsComparisonChart from "./components/AssetsComparisonChart";
 import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
-import { getValidYears, numericValue } from "./utils/analyticsData";
+import { getValidYears } from "./utils/analyticsData";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
@@ -43,32 +43,10 @@ function formatFileSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatMetricValue(value) {
-    const number = numericValue(value);
-    return number === null ? "--" : number.toLocaleString("en-IN", { maximumFractionDigits: 2 });
-}
-
 function formatDocumentDate(value) {
     if (!value) return "Date unavailable";
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function datasetValue(analytics, matcher, year) {
-    const row = (analytics?.dataset ?? []).find(item => matcher(String(item.label ?? "").toLowerCase(), item));
-    return row ? numericValue(row.values?.[year]) : null;
-}
-
-function FinancialKpis({ assets, liabilities, year }) {
-    const kpis = [
-        ["Total assets", datasetValue(assets, (label, item) => item.role === "statementTotal" && label.includes("total assets"), year)],
-        ["Current assets", datasetValue(assets, (label, item) => item.role === "sectionTotal" && label.includes("current assets") && !label.includes("non-current"), year)],
-        ["Non-current assets", datasetValue(assets, (label, item) => item.role === "sectionTotal" && label.includes("non-current assets"), year)],
-        ["Total liabilities", datasetValue(liabilities, (label, item) => item.role === "statementTotal" && label.includes("total liabilities"), year)],
-        ["Equity", datasetValue(liabilities, label => label === "equity" || label.includes("total equity"), year)],
-    ];
-
-    return <div className="insight-kpis">{kpis.map(([label, value]) => <div className="insight-kpi" key={label}><span>{label}</span><strong>{formatMetricValue(value)}</strong><small>{year || "Selected period"}</small></div>)}</div>;
 }
 
 function NavIcon({ children }) {
@@ -132,6 +110,7 @@ function App() {
     const [documentsLoading, setDocumentsLoading] = useState(false);
     const [activeChart, setActiveChart] = useState("comparison");
     const [reportMenuOpen, setReportMenuOpen] = useState(false);
+    const [reportHistoryOpen, setReportHistoryOpen] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const analyticsRequestRef = useRef(0);
 
@@ -391,7 +370,7 @@ function App() {
     return (
         <div className="app workspace-app">
             {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
-            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation">Close</button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#documents" onClick={() => setMobileNavOpen(false)}>Documents</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a></nav>}
+            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation">Close</button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#documents" onClick={() => setMobileNavOpen(false)}>Documents</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}</nav>}
             <aside className="sidebar">
                 <div className="brand-lockup"><span className="brand-mark">FA</span><strong>Financial<br />Analyzer</strong></div>
                 <div className="sidebar-label">Workspace</div>
@@ -399,6 +378,8 @@ function App() {
                     <a className="nav-item is-active" href="#dashboard"><NavIcon>+</NavIcon>Dashboard</a>
                     <a className="nav-item" href="#documents"><NavIcon>[]</NavIcon>Documents</a>
                     <a className="nav-item" href="#analytics"><NavIcon>~</NavIcon>Analytics</a>
+                    <button id="documents" className={`nav-item nav-button report-history-toggle ${reportHistoryOpen ? "is-open" : ""}`} onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen} aria-controls="sidebar-report-history"><NavIcon>{reportHistoryOpen ? "-" : "+"}</NavIcon>Report history<span className="nav-chevron" aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>
+                    {reportHistoryOpen && <div className="sidebar-report-history" id="sidebar-report-history"><div className="history-heading"><div><span className="eyebrow">Report history</span><h3>Reports</h3></div><span className="history-count">{documents.length}</span></div>{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p><a href="#upload">Upload PDF</a></div> : <><button className={`report-selector ${reportMenuOpen ? "is-open" : ""}`} onClick={() => setReportMenuOpen(open => !open)} aria-expanded={reportMenuOpen} disabled={documentsLoading}><span>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Select report"}</span><span aria-hidden="true">⌄</span></button>{reportMenuOpen && <div className="report-menu"><span className="report-menu-label">Select report</span>{documents.map((document, index) => <button className={`report-option ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { setReportMenuOpen(false); handleDocumentSelect(document.id); }}><span>{document.id === activeDocumentId ? "✓" : ""}</span><span className="report-option-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}{document.extraction_status ? ` · ${document.extraction_status}` : ""}</small></span>{index === 0 && <em>Latest</em>}</button>)}</div>}<div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => handleDocumentSelect(document.id)}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div></>}</div>}
                 </nav>
                 <div className="sidebar-footer"><div className="sidebar-label">Account</div><button className="nav-item nav-button" onClick={handleLogout}><NavIcon>&gt;</NavIcon>Log out</button></div>
             </aside>
@@ -431,18 +412,9 @@ function App() {
                     </section>
                     <section className="insights-section" id="analytics">
                         <SectionHeader eyebrow="Financial intelligence" title="Balance Sheet Insights" description="Financial position and asset composition from your reports." />
-                        <aside className="report-history" id="documents">
-                            <div className="history-heading"><div><span className="eyebrow">Report history</span><h3>Reports</h3></div><span className="history-count">{documents.length}</span></div>
-                            {documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p><a href="#upload">Upload PDF</a></div> : <>
-                                <button className={`report-selector ${reportMenuOpen ? "is-open" : ""}`} onClick={() => setReportMenuOpen(open => !open)} aria-expanded={reportMenuOpen} disabled={documentsLoading}><span>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Select report"}</span><span aria-hidden="true">⌄</span></button>
-                                {reportMenuOpen && <div className="report-menu"><span className="report-menu-label">Select report</span>{documents.map((document, index) => <button className={`report-option ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { setReportMenuOpen(false); handleDocumentSelect(document.id); }}><span>{document.id === activeDocumentId ? "✓" : ""}</span><span className="report-option-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}{document.extraction_status ? ` · ${document.extraction_status}` : ""}</small></span>{index === 0 && <em>Latest</em>}</button>)}</div>}
-                                <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => handleDocumentSelect(document.id)}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>
-                            </>}
-                        </aside>
                         <div className="insights-workspace" id="insights-content">
                             <div className="insight-workspace-main">
                                 {(analyticsData.assets || analyticsLoading.assets || analyticsLoading.liabilities) ? <>
-                        <FinancialKpis assets={analyticsData.assets} liabilities={analyticsData.liabilities} year={getValidYears(analyticsData.assets)[0]} />
                         <div className="analytics-tabs" role="tablist" aria-label="Financial analytics views">
                             <button
                                 className={activeChart === "comparison" ? "is-active" : ""}
