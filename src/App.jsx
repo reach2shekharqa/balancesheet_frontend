@@ -367,6 +367,10 @@ function App() {
         }
     }
 
+    const latestReport = documents[0];
+    const analyticsReady = analyticsData.assets && analyticsData.liabilities;
+    const analyticsBusy = analyticsLoading.assets || analyticsLoading.liabilities;
+
     return (
         <div className="app workspace-app">
             {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
@@ -397,9 +401,9 @@ function App() {
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </section>
                     <section className="kpi-grid" aria-label="Workspace summary">
-                        <div className="kpi-card"><span className="kpi-label">Reports analyzed</span><strong>{file ? "1" : "0"}</strong><span className="kpi-foot">In this session</span></div>
-                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsData.assets ? "status-positive" : ""}>{analyticsData.assets ? "Ready" : uploading ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
-                        <div className="kpi-card"><span className="kpi-label">Latest report</span><strong>{file ? formatFileSize(file.size) : "--"}</strong><span className="kpi-foot">PDF document</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Reports analyzed</span><strong>{documents.length}</strong><span className="kpi-foot">In this session</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-positive" : ""}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={latestReport?.original_filename}>{latestReport?.original_filename || "--"}</strong><span className="kpi-foot">PDF document</span></div>
                     </section>
                     <section className="upload-section" id="upload">
                         <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
