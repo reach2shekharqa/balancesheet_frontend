@@ -4,7 +4,7 @@ import "./App.css";
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
 import AssetsComparisonChart from "./components/AssetsComparisonChart";
 import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
-import { displayLabel, getValidYears, numericValue } from "./utils/analyticsData";
+import { getValidYears, numericValue } from "./utils/analyticsData";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
@@ -69,14 +69,6 @@ function FinancialKpis({ assets, liabilities, year }) {
     ];
 
     return <div className="insight-kpis">{kpis.map(([label, value]) => <div className="insight-kpi" key={label}><span>{label}</span><strong>{formatMetricValue(value)}</strong><small>{year || "Selected period"}</small></div>)}</div>;
-}
-
-function AssetBreakdownTable({ analyticsData }) {
-    const years = getValidYears(analyticsData).slice(0, 2);
-    const rows = (analyticsData?.dataset ?? []).filter(row => row?.role === "detail").filter(row => years.some(year => numericValue(row.values?.[year]) !== null));
-    if (!rows.length) return null;
-
-    return <div className="breakdown-panel"><div className="breakdown-heading"><div><span className="eyebrow">Detailed breakdown</span><h3>Asset composition</h3></div><span>{years.join(" / ")}</span></div><div className="breakdown-table-wrap"><table className="breakdown-table"><thead><tr><th>Category</th>{years.map(year => <th key={year}>{year}</th>)}</tr></thead><tbody>{rows.map(row => <tr key={`${row.section}-${row.rowIndex}`}><td>{displayLabel(row.label)}</td>{years.map(year => <td key={year}>{formatMetricValue(row.values?.[year])}</td>)}</tr>)}</tbody></table></div></div>;
 }
 
 function NavIcon({ children }) {
@@ -438,18 +430,17 @@ function App() {
                         {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
                     <section className="insights-section" id="analytics">
-                        <SectionHeader eyebrow="Financial intelligence" title="Balance Sheet Insights" description="Financial position and asset composition for the selected report." />
+                        <SectionHeader eyebrow="Financial intelligence" title="Balance Sheet Insights" description="Financial position and asset composition from your reports." />
+                        <aside className="report-history" id="documents">
+                            <div className="history-heading"><div><span className="eyebrow">Report history</span><h3>Reports</h3></div><span className="history-count">{documents.length}</span></div>
+                            {documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p><a href="#upload">Upload PDF</a></div> : <>
+                                <button className={`report-selector ${reportMenuOpen ? "is-open" : ""}`} onClick={() => setReportMenuOpen(open => !open)} aria-expanded={reportMenuOpen} disabled={documentsLoading}><span>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Select report"}</span><span aria-hidden="true">⌄</span></button>
+                                {reportMenuOpen && <div className="report-menu"><span className="report-menu-label">Select report</span>{documents.map((document, index) => <button className={`report-option ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { setReportMenuOpen(false); handleDocumentSelect(document.id); }}><span>{document.id === activeDocumentId ? "✓" : ""}</span><span className="report-option-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}{document.extraction_status ? ` · ${document.extraction_status}` : ""}</small></span>{index === 0 && <em>Latest</em>}</button>)}</div>}
+                                <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => handleDocumentSelect(document.id)}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>
+                            </>}
+                        </aside>
                         <div className="insights-workspace" id="insights-content">
-                            <aside className="report-history" id="documents">
-                                <div className="history-heading"><div><span className="eyebrow">Report history</span><h3>Reports</h3></div><span className="history-count">{documents.length}</span></div>
-                                {documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p><a href="#upload">Upload PDF</a></div> : <>
-                                    <button className={`report-selector ${reportMenuOpen ? "is-open" : ""}`} onClick={() => setReportMenuOpen(open => !open)} aria-expanded={reportMenuOpen} disabled={documentsLoading}><span>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Select report"}</span><span aria-hidden="true">⌄</span></button>
-                                    {reportMenuOpen && <div className="report-menu"><span className="report-menu-label">Select report</span>{documents.map((document, index) => <button className={`report-option ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { setReportMenuOpen(false); handleDocumentSelect(document.id); }}><span>{document.id === activeDocumentId ? "✓" : ""}</span><span className="report-option-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}{document.extraction_status ? ` · ${document.extraction_status}` : ""}</small></span>{index === 0 && <em>Latest</em>}</button>)}</div>}
-                                    <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => handleDocumentSelect(document.id)}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>
-                                </>}
-                            </aside>
                             <div className="insight-workspace-main">
-                                <div className="insight-report-heading"><div><span className="eyebrow">Selected report</span><h3>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Balance sheet analysis"}</h3></div>{analyticsData.assets && <span className="analysis-ready"><i /> Analysis ready</span>}</div>
                                 {(analyticsData.assets || analyticsLoading.assets || analyticsLoading.liabilities) ? <>
                         <FinancialKpis assets={analyticsData.assets} liabilities={analyticsData.liabilities} year={getValidYears(analyticsData.assets)[0]} />
                         <div className="analytics-tabs" role="tablist" aria-label="Financial analytics views">
@@ -485,7 +476,7 @@ function App() {
                                 ) : (
                                     analyticsLoading.liabilities ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <LiabilitiesBreakdownChart analyticsData={analyticsData.liabilities} />
                                 )}
-                        </section><AssetBreakdownTable analyticsData={analyticsData.assets} /></> : <div className="insights-skeleton"><LoadingIndicator label={documentsLoading ? "Loading reports..." : "Loading insights..."} /><span /></div>}
+                        </section></> : <div className="insights-skeleton"><LoadingIndicator label={documentsLoading ? "Loading reports..." : "Loading insights..."} /><span /></div>}
                             </div>
                         </div>
                     </section>
