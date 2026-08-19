@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
@@ -7,6 +7,7 @@ import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
 import { getValidYears } from "./utils/analyticsData";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 async function requestJson(path, options = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -166,6 +167,7 @@ function App() {
     const [reportHistoryOpen, setReportHistoryOpen] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const analyticsRequestRef = useRef(0);
+    const googleButtonRef = useRef(null);
 
     useEffect(() => {
         requestJson("/auth/me")
@@ -276,11 +278,75 @@ function App() {
     async function handleLogout() {
         await requestJson("/auth/logout", { method: "POST" });
         setUser(null);
+        setAuthMode("login");
+        setAuthForm({ userName: "", email: "", password: "" });
+        setAuthMessage("");
         setFile(null);
         setDocuments([]);
         setActiveDocumentId(null);
         setAnalyticsData({ assets: null, liabilities: null });
     }
+
+    const handleGoogleLogin = useCallback(async credential => {
+        if (!credential || authSubmitting) {
+            return;
+        }
+
+        setAuthMessage("");
+        setAuthSubmitting(true);
+
+        try {
+            const result = await requestJson("/auth/google", {
+                method: "POST",
+                body: JSON.stringify({ credential }),
+            });
+            setDocumentsLoading(true);
+            setUser(result.user);
+            setAuthForm({ userName: "", email: "", password: "" });
+        } catch (error) {
+            setAuthMessage(error.message);
+        } finally {
+            setAuthSubmitting(false);
+        }
+    }, [authSubmitting]);
+
+    useEffect(() => {
+        if (user || !GOOGLE_CLIENT_ID || !googleButtonRef.current) {
+            return;
+        }
+
+        const renderGoogleButton = () => {
+            if (!window.google?.accounts?.id || !googleButtonRef.current) {
+                return false;
+            }
+
+            window.google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: response => handleGoogleLogin(response.credential),
+            });
+            googleButtonRef.current.replaceChildren();
+            window.google.accounts.id.renderButton(googleButtonRef.current, {
+                theme: "outline",
+                size: "large",
+                width: 350,
+                text: authMode === "login" ? "signin_with" : "signup_with",
+                shape: "rectangular",
+            });
+            return true;
+        };
+
+        if (renderGoogleButton()) {
+            return;
+        }
+
+        const renderInterval = window.setInterval(() => {
+            if (renderGoogleButton()) {
+                window.clearInterval(renderInterval);
+            }
+        }, 100);
+
+        return () => window.clearInterval(renderInterval);
+    }, [authLoading, authMode, handleGoogleLogin, user]);
 
     if (authLoading) {
         return <div className="app auth-loading"><div className="loading-card"><div className="brand-mark">FA</div><LoadingIndicator label="Loading your workspace..." /></div></div>;
@@ -301,18 +367,19 @@ function App() {
                 <div className="auth-panel">
                     <div className="auth-panel-content">
                         <div className="auth-card">
-                        <span className="eyebrow">Welcome back</span>
+                        <span className="eyebrow">{authMode === "login" ? "Welcome back" : "Join Financial Analyzer"}</span>
                         <h2>{authMode === "login" ? "Sign in to your workspace" : "Create your workspace"}</h2>
                         <p>{authMode === "login" ? "Access your financial analysis dashboard." : "Start turning reports into useful insight."}</p>
                     <form onSubmit={handleAuthSubmit} className="auth-form">
                         {authMode === "register" && (
                             <label>
                                 Name
+                                <input name="userName" type="text" value={authForm.userName} onChange={updateAuthField} required autoComplete="name" />
                             </label>
                         )}
                         <label>
-                            Email
-                            <input name="email" type="email" value={authForm.email} onChange={updateAuthField} required autoComplete="email" />
+                            {authMode === "login" ? "Email or username" : "Email"}
+                            <input name="email" type={authMode === "login" ? "text" : "email"} value={authForm.email} onChange={updateAuthField} required autoComplete={authMode === "login" ? "username" : "email"} />
                         </label>
                         <label>
                             Password
@@ -321,12 +388,16 @@ function App() {
                         <button className="primary-button" type="submit" disabled={authSubmitting}>
                             {authSubmitting ? (
                                 <LoadingIndicator label={authMode === "login" ? "Logging in..." : "Creating account..."} />
-                            ) : authMode === "login" ? "Login" : "Register"}
+                            ) : authMode === "login" ? "Login" : "Create account"}
                         </button>
                     </form>
+                    {GOOGLE_CLIENT_ID && <>
+                        <div className="auth-divider"><span>or continue with</span></div>
+                        <div className="google-login-button" ref={googleButtonRef} />
+                    </>}
                     {authMessage && <div className="status-banner error">{authMessage}</div>}
-                    <button className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
-                        {authMode === "login" ? "Create an account" : "Back to login"}
+                    <button type="button" className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
+                        {authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}
                     </button>
                         </div>
                         <MarketTicker />
@@ -344,6 +415,13 @@ function App() {
         setMessage("");
         setAnalyticsData({ assets: null, liabilities: null });
         setActiveChart("comparison");
+    }
+
+    function focusAnalytics() {
+        const analyticsSection = document.getElementById("analytics");
+
+        analyticsSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+        analyticsSection?.focus({ preventScroll: true });
     }
 
     async function handleUpload() {
@@ -387,6 +465,7 @@ function App() {
             const documentsResult = await requestJson("/documents");
             setDocuments(documentsResult.documents ?? []);
             setMessage("Balance sheet analytics loaded successfully.");
+            focusAnalytics();
         } catch (error) {
             console.error("Upload / analytics error:", error);
             setMessage("Unable to load balance sheet analytics. Please try again.");
@@ -470,7 +549,7 @@ function App() {
                         <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!file || uploading}>{uploading ? <LoadingIndicator label="Processing report..." /> : "Analyze report"}</button>{file && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
                         {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
-                    <section className="insights-section" id="analytics">
+                    <section className="insights-section" id="analytics" tabIndex="-1">
                         <SectionHeader eyebrow="Financial intelligence" title="Balance Sheet Insights" description="Financial position and asset composition from your reports." />
                         <div className="insights-workspace" id="insights-content">
                             <div className="insight-workspace-main">
