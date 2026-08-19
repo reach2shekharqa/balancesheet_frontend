@@ -198,9 +198,10 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .market-ticker { width: 100vw; max-width: 350px; margin-top: 34px; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fbfcfd; }
 .market-ticker-track { display: flex; width: max-content; animation: ticker-scroll 28s linear infinite; }
 .market-ticker-item { display: flex; align-items: baseline; gap: 8px; min-width: 170px; padding: 11px 18px; border-right: 1px solid var(--line); font-size: 10px; white-space: nowrap; }
-.market-ticker-item strong { color: var(--ink); font-size: 11px; }
+.market-ticker-item strong { color: var(--ink); font-size: 11px; font-weight: 600; }
+.market-ticker-item small { color: var(--subtle); font-size: 8px; }
 .market-ticker-item span { color: var(--muted); }
-.market-ticker-item em { font-style: normal; font-weight: 800; }
+.market-ticker-item em { font-style: normal; font-weight: 600; }
 .market-ticker-item .is-positive { color: var(--success); }
 .market-ticker-item .is-negative { color: var(--danger); }
 @keyframes ticker-scroll { to { transform: translateX(-50%); } }

@@ -76,7 +76,8 @@ function MarketTicker() {
                     const isPositive = Number(stock.changePercent) >= 0;
                     return (
                         <div className="market-ticker-item" key={`${stock.symbol}-${index}`}>
-                            <strong>{stock.symbol}</strong>
+                            <strong>{stock.name || stock.symbol}</strong>
+                            {stock.symbol && stock.name && <small>{stock.symbol}</small>}
                             <span>{formatMarketNumber(stock.price)}</span>
                             <em className={isPositive ? "is-positive" : "is-negative"}>
                                 {isPositive ? "+" : ""}{formatMarketNumber(stock.changePercent, "%")}
