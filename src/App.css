@@ -1,5 +1,6 @@
 .app {
     min-height: 100vh;
+    width: 100%;
     display: flex;
     justify-content: center;
     box-sizing: border-box;
@@ -98,6 +99,7 @@
 }
 
 .account-controls {
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -224,6 +226,7 @@ button:disabled {
 }
 
 .analytics-switcher button {
+    min-width: 0;
     width: auto;
     padding: 10px 16px;
     border: 1px solid transparent;
@@ -262,6 +265,10 @@ button:disabled {
     color: #1f5fbf;
 }
 
+.assets-chart {
+    min-width: 0;
+}
+
 @media (max-width: 900px) {
     .card {
         padding: 24px 16px;
@@ -283,7 +290,7 @@ button:disabled {
 
 @media (max-width: 560px) {
     .app {
-        padding: 12px 0;
+        padding: 0;
     }
 
     .card {
@@ -293,6 +300,22 @@ button:disabled {
 
     .analytics-hero h2 {
         font-size: 26px;
+    }
+
+    .analytics-switcher {
+        width: 100%;
+    }
+
+    .analytics-switcher button {
+        min-height: 48px;
+        padding: 8px 4px;
+        font-size: 12px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .assets-chart > div {
+        height: 380px !important;
     }
 }
 
