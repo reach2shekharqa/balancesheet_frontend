@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
@@ -41,6 +41,20 @@ function formatFileSize(bytes) {
     if (!bytes) return "PDF document";
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDocumentDate(value) {
+    if (!value) return "Date unavailable";
+
+    return new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    }).format(new Date(value));
+}
+
+function documentStatusLabel(status) {
+    return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown";
 }
 
 function NavIcon({ children }) {
@@ -99,8 +113,12 @@ function App() {
         assets: null,
         liabilities: null,
     });
+    const [documents, setDocuments] = useState([]);
+    const [activeDocumentId, setActiveDocumentId] = useState(null);
+    const [documentsLoading, setDocumentsLoading] = useState(false);
     const [activeChart, setActiveChart] = useState("comparison");
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const analyticsRequestRef = useRef(0);
 
     useEffect(() => {
         requestJson("/auth/me")
@@ -118,6 +136,67 @@ function App() {
             })
             .finally(() => setAuthLoading(false));
     }, []);
+
+        async function loadAnalytics(documentId) {
+            const requestId = analyticsRequestRef.current + 1;
+            analyticsRequestRef.current = requestId;
+            setAnalyticsLoading({ assets: true, liabilities: true });
+            setAnalyticsData({ assets: null, liabilities: null });
+
+            try {
+                const [assets, liabilities] = await Promise.all([
+                    requestAnalytics(documentId, "assetsBreakdown"),
+                    requestAnalytics(documentId, "liabilitiesBreakdown"),
+                ]);
+
+                if (requestId === analyticsRequestRef.current) {
+                    setAnalyticsData({ assets, liabilities });
+                }
+            } finally {
+                if (requestId === analyticsRequestRef.current) {
+                    setAnalyticsLoading({ assets: false, liabilities: false });
+                }
+            }
+        }
+
+        useEffect(() => {
+            if (!user) {
+                return;
+            }
+
+            let cancelled = false;
+
+            requestJson("/documents")
+                .then(result => {
+                    if (cancelled) return;
+
+                    const nextDocuments = result.documents ?? [];
+                    setDocuments(nextDocuments);
+
+                    const latestDocument = nextDocuments[0];
+                    if (latestDocument) {
+                        setActiveDocumentId(latestDocument.id);
+                        loadAnalytics(latestDocument.id).catch(error => {
+                            if (!cancelled) {
+                                setMessage(error.message);
+                            }
+                        });
+                    } else {
+                        setActiveDocumentId(null);
+                        setAnalyticsData({ assets: null, liabilities: null });
+                    }
+                })
+                .catch(error => {
+                    if (!cancelled) setMessage(error.message);
+                })
+                .finally(() => {
+                    if (!cancelled) setDocumentsLoading(false);
+                });
+
+            return () => {
+                cancelled = true;
+            };
+        }, [user]);
 
     function updateAuthField(event) {
         setAuthForm(current => ({ ...current, [event.target.name]: event.target.value }));
@@ -150,6 +229,8 @@ function App() {
         await requestJson("/auth/logout", { method: "POST" });
         setUser(null);
         setFile(null);
+        setDocuments([]);
+        setActiveDocumentId(null);
         setAnalyticsData({ assets: null, liabilities: null });
     }
 
@@ -251,22 +332,10 @@ function App() {
 
             setMessage("Processing document...");
 
-            setAnalyticsLoading({ assets: true, liabilities: false });
-            const analyticsResult = await requestAnalytics(
-                nextDocumentId,
-                "assetsBreakdown"
-            );
-
-            setAnalyticsLoading({ assets: false, liabilities: true });
-            const liabilitiesResult = await requestAnalytics(
-                nextDocumentId,
-                "liabilitiesBreakdown"
-            );
-
-            setAnalyticsData({
-                assets: analyticsResult,
-                liabilities: liabilitiesResult,
-            });
+            setActiveDocumentId(nextDocumentId);
+            await loadAnalytics(nextDocumentId);
+            const documentsResult = await requestJson("/documents");
+            setDocuments(documentsResult.documents ?? []);
             setMessage("Balance sheet analytics loaded successfully.");
         } catch (error) {
             console.error("Upload / analytics error:", error);
@@ -274,6 +343,19 @@ function App() {
         } finally {
             setUploading(false);
             setAnalyticsLoading({ assets: false, liabilities: false });
+        }
+    }
+
+    async function handleDocumentSelect(documentId) {
+        if (documentId === activeDocumentId) return;
+
+        setActiveDocumentId(documentId);
+        setMessage("");
+
+        try {
+            await loadAnalytics(documentId);
+        } catch (error) {
+            setMessage(`Unable to load this document's analytics: ${error.message}`);
         }
     }
 
@@ -321,7 +403,7 @@ function App() {
                         <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsData.assets ? "status-positive" : ""}>{analyticsData.assets ? "Ready" : uploading ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
                         <div className="kpi-card"><span className="kpi-label">Latest report</span><strong>{file ? formatFileSize(file.size) : "--"}</strong><span className="kpi-foot">PDF document</span></div>
                     </section>
-                    <section className="upload-section" id="documents">
+                    <section className="upload-section" id="upload">
                         <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
                         <div className={`upload-zone ${file ? "has-file" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
                             <input id="file-upload" className="file-input" type="file" accept=".pdf,application/pdf" onChange={handleFileChange} disabled={uploading} />
@@ -330,8 +412,20 @@ function App() {
                         <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!file || uploading}>{uploading ? <LoadingIndicator label="Processing report..." /> : "Analyze report"}</button>{file && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
                         {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
+                    <section className="documents-section" id="documents">
+                        <SectionHeader eyebrow="Document history" title="My documents" description="Every report stays available for review." />
+                        {documentsLoading ? <div className="document-list-loading"><LoadingIndicator label="Loading documents..." /></div> : documents.length === 0 ? <div className="empty-state"><strong>No documents yet</strong><p>Upload your first financial report to begin.</p></div> : <>
+                            <div className="current-document"><span className="eyebrow">Currently selected</span><strong>{documents.find(document => document.id === activeDocumentId)?.original_filename}</strong></div>
+                            <div className="document-list" aria-label="My documents">
+                                {documents.map((document, index) => <button key={document.id} className={`document-row ${document.id === activeDocumentId ? "is-selected" : ""}`} onClick={() => handleDocumentSelect(document.id)} aria-pressed={document.id === activeDocumentId}>
+                                    <span className="document-row-main"><strong>{document.original_filename}</strong><span>Uploaded {formatDocumentDate(document.linked_at || document.uploaded_at)} · {documentStatusLabel(document.extraction_status)}</span></span>
+                                    <span className="document-row-badges">{index === 0 && <em>Latest</em>}{document.id === activeDocumentId && <small>Selected</small>}</span>
+                                </button>)}
+                            </div>
+                        </>}
+                    </section>
                     <section className="analytics-section" id="analytics">
-                        <SectionHeader eyebrow="Insights" title="Balance sheet analytics" description="Explore the financial story in your latest uploaded report." />
+                        <SectionHeader eyebrow="Insights" title="Balance sheet analytics" description="Explore the financial story in your selected report." />
                         {(analyticsData.assets || analyticsLoading.assets || analyticsLoading.liabilities) ? <>
                         <div className="analytics-tabs" role="tablist" aria-label="Financial analytics views">
                             <button
