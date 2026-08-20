@@ -40,59 +40,6 @@ function LoadingIndicator({ label }) {
     );
 }
 
-function formatMarketNumber(value, suffix = "") {
-    const number = Number(value);
-    return Number.isFinite(number) ? `${number.toFixed(2)}${suffix}` : "--";
-}
-
-function MarketTicker() {
-    const [stocks, setStocks] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        requestJson("/market/trending")
-            .then(result => {
-                if (!cancelled) setStocks(result.stocks ?? []);
-            })
-            .catch(() => {
-                if (!cancelled) setStocks([]);
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    if (loading || stocks.length === 0) {
-        return null;
-    }
-
-    return (
-        <section className="market-ticker" aria-label="Trending stocks">
-            <div className="market-ticker-track">
-                {[...stocks, ...stocks].map((stock, index) => {
-                    const isPositive = Number(stock.changePercent) >= 0;
-                    return (
-                        <div className="market-ticker-item" key={`${stock.symbol}-${index}`}>
-                            <strong>{stock.name || stock.symbol}</strong>
-                            {stock.symbol && stock.name && <small>{stock.symbol}</small>}
-                            <span>{formatMarketNumber(stock.price)}</span>
-                            <em className={isPositive ? "is-positive" : "is-negative"}>
-                                {isPositive ? "+" : ""}{formatMarketNumber(stock.changePercent, "%")}
-                            </em>
-                        </div>
-                    );
-                })}
-            </div>
-        </section>
-    );
-}
-
 function formatFileSize(bytes) {
     if (!bytes) return "PDF document";
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -106,6 +53,213 @@ function formatReportName(filename, maxLength = 28) {
     const base = extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
     const visibleLength = Math.max(8, maxLength - extension.length - 3);
     return `${base.slice(0, visibleLength)}...${extension}`;
+}
+
+const landingFeatures = [
+    {
+        title: "AI Financial Analysis",
+        description: "Automatically analyse financial statements and extract meaningful insights.",
+        icon: "✦",
+    },
+    {
+        title: "Balance Sheet Analysis",
+        description: "Understand assets, liabilities, borrowings, receivables, inventory and financial position.",
+        icon: "▣",
+    },
+    {
+        title: "Profit & Loss",
+        description: "Track revenue, expenses, operating profit and net profit across reporting periods.",
+        icon: "↗",
+    },
+    {
+        title: "Cash Flow",
+        description: "Understand operating, investing and financing cash movements across the business.",
+        icon: "◌",
+    },
+    {
+        title: "Year-over-Year Insights",
+        description: "Compare financial periods and identify the shifts that matter most to growth.",
+        icon: "△",
+    },
+    {
+        title: "AI-Powered Insights",
+        description: "Convert raw financial data into clear business conclusions and recommendations.",
+        icon: "◎",
+    },
+];
+
+const landingSteps = [
+    {
+        number: "01",
+        title: "Upload",
+        description: "Upload your financial report or PDF to start the review.",
+    },
+    {
+        number: "02",
+        title: "Analyse",
+        description: "AI extracts and analyses the financial statements automatically.",
+    },
+    {
+        number: "03",
+        title: "Understand",
+        description: "Get metrics, comparisons and actionable insights in plain language.",
+    },
+];
+
+function LandingPage({ onGetStarted }) {
+    return (
+        <div className="landing-page">
+            <header className="landing-header">
+                <div className="landing-shell landing-nav">
+                    <div className="brand-lockup">
+                        <span className="brand-mark">₹</span>
+                        <strong>Financial Analyzer</strong>
+                    </div>
+                    <nav className="landing-nav-links" aria-label="Main navigation">
+                        <a href="#features">Features</a>
+                        <a href="#how-it-works">How It Works</a>
+                        <a href="#benefits">Benefits</a>
+                    </nav>
+                    <button className="primary-button landing-nav-button landing-gold-cta" type="button" onClick={onGetStarted}>
+                        Get Started
+                    </button>
+                </div>
+            </header>
+
+            <main className="landing-shell landing-main">
+                <section className="landing-hero">
+                    <div className="landing-hero-copy">
+                        <span className="eyebrow landing-eyebrow">AI-powered financial analysis</span>
+                        <h1>Turn Financial Reports Into Clear Business Insights</h1>
+                        <p>
+                            Upload your financial statements and instantly understand revenue, profitability,
+                            cash flow, balance sheet health, trends and key financial insights.
+                        </p>
+                        <div className="landing-hero-actions">
+                            <button className="primary-button landing-gold-cta" type="button" onClick={onGetStarted}>
+                                Get Started
+                            </button>
+                        </div>
+                        <div className="landing-trust-row" aria-label="Product highlights">
+                            <span>
+                                <strong>2x</strong> faster analysis
+                            </span>
+                            <span>
+                                <strong>24/7</strong> insight support
+                            </span>
+                            <span>
+                                <strong>PDF</strong> upload ready
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="landing-hero-visual" aria-label="Analytics dashboard preview">
+                        <div className="landing-image-frame">
+                            <div className="analytics-preview">
+                                <div className="preview-toolbar">
+                                    <div className="preview-brand"><span className="preview-brand-mark">₹</span><span>Financial overview</span></div>
+                                    <span className="preview-period">2024 / 25 <b>⌄</b></span>
+                                </div>
+                                <div className="preview-heading"><div><span>Performance snapshot</span><strong>Business health at a glance</strong></div><span className="preview-status"><i /> Live analysis</span></div>
+                                <div className="preview-kpis">
+                                    <div><span>Revenue</span><strong>₹84.6L</strong><em>+18.4%</em></div>
+                                    <div><span>Net profit</span><strong>₹21.8L</strong><em>+12.8%</em></div>
+                                    <div><span>Cash position</span><strong>₹32.4L</strong><em>+8.6%</em></div>
+                                </div>
+                                <div className="preview-chart-grid">
+                                    <div className="preview-line-chart">
+                                        <div className="preview-chart-title"><strong>Revenue trend</strong><span>Year over year</span></div>
+                                        <div className="line-chart-canvas" aria-label="Revenue trend rising over four years">
+                                            <span className="chart-grid-line line-one" /><span className="chart-grid-line line-two" /><span className="chart-grid-line line-three" />
+                                            <svg viewBox="0 0 340 150" role="img" aria-label="Rising revenue line chart"><defs><linearGradient id="preview-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#4f8cf7" stopOpacity=".28" /><stop offset="1" stopColor="#4f8cf7" stopOpacity="0" /></linearGradient></defs><path className="preview-area" d="M10 124 C48 112 64 110 92 96 S144 104 174 75 S225 78 252 52 S300 46 330 18 L330 145 L10 145 Z" /><path className="preview-line" d="M10 124 C48 112 64 110 92 96 S144 104 174 75 S225 78 252 52 S300 46 330 18" /><circle cx="330" cy="18" r="5" /></svg>
+                                            <div className="chart-axis"><span>2021</span><span>2022</span><span>2023</span><span>2024</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="preview-pie-card"><div className="preview-chart-title"><strong>Expense mix</strong><span>Current year</span></div><div className="pie-wrap"><div className="preview-pie" aria-label="Expense mix pie chart" /><div className="pie-legend"><span><i className="legend-blue" /> Operations <b>48%</b></span><span><i className="legend-purple" /> People <b>32%</b></span><span><i className="legend-gold" /> Other <b>20%</b></span></div></div></div>
+                                </div>
+                                <div className="preview-bottom"><span><i className="preview-insight-icon">✦</i><strong>AI insight</strong> Margins improved across the last 3 periods</span><b>View insights&nbsp; →</b></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="landing-features" id="features">
+                    <div className="section-header landing-section-header">
+                        <div>
+                            <span className="eyebrow">Platform capabilities</span>
+                            <h2>Built for smarter financial decisions</h2>
+                        </div>
+                    </div>
+                    <div className="feature-grid">
+                        {landingFeatures.map((feature) => (
+                            <article className="feature-card" key={feature.title}>
+                                <div className="feature-icon" aria-hidden="true">{feature.icon}</div>
+                                <h3>{feature.title}</h3>
+                                <p>{feature.description}</p>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="landing-steps" id="how-it-works">
+                    <div className="section-header landing-section-header">
+                        <div>
+                            <span className="eyebrow">How it works</span>
+                            <h2>From raw statements to clear business understanding</h2>
+                        </div>
+                    </div>
+                    <div className="steps-grid">
+                        {landingSteps.map((step) => (
+                            <article className="step-card" key={step.number}>
+                                <span className="step-number">{step.number}</span>
+                                <h3>{step.title}</h3>
+                                <p>{step.description}</p>
+                            </article>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="landing-benefits" id="benefits">
+                    <div className="benefit-panel">
+                        <div className="benefit-copy">
+                            <span className="eyebrow">Why teams use it</span>
+                            <h2>See trends, risks and opportunities in one place</h2>
+                            <p>
+                                Turn financial statements into focused insight for performance reviews,
+                                planning conversations, and faster decision-making across the business.
+                            </p>
+                        </div>
+                        <div className="benefit-points">
+                            <div>
+                                <strong>Operational clarity</strong>
+                                <span>Understand revenue, cash movement and profitability without manual spreadsheet work.</span>
+                            </div>
+                            <div>
+                                <strong>Faster reviews</strong>
+                                <span>Surface the metrics and changes that matter most for financial planning.</span>
+                            </div>
+                            <div>
+                                <strong>Actionable insight</strong>
+                                <span>Support conversations with concise explanations and direct comparisons.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="landing-cta">
+                    <div className="cta-panel">
+                        <div>
+                            <span className="eyebrow">Ready to get started?</span>
+                            <h2>Ready to understand your financial reports?</h2>
+                        </div>
+                        <button className="primary-button landing-gold-cta" type="button" onClick={onGetStarted}>
+                            Get Started
+                        </button>
+                    </div>
+                </section>
+            </main>
+        </div>
+    );
 }
 
 function formatDocumentDate(value) {
@@ -170,6 +324,7 @@ function App() {
     const [authForm, setAuthForm] = useState({ userName: "", email: "", password: "" });
     const [authMessage, setAuthMessage] = useState("");
     const [authSubmitting, setAuthSubmitting] = useState(false);
+    const [landingView, setLandingView] = useState("landing");
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState("");
     const [uploading, setUploading] = useState(false);
@@ -205,6 +360,7 @@ function App() {
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const analyticsRequestRef = useRef(0);
     const googleButtonRef = useRef(null);
+    const googleInitializedRef = useRef(false);
 
     useEffect(() => {
         const handleHashChange = () => setActiveSection(window.location.hash || "#dashboard");
@@ -323,9 +479,16 @@ function App() {
         }
     }
 
+    const openAuthFlow = useCallback((mode = "login") => {
+        setLandingView("auth");
+        setAuthMode(mode);
+        setAuthMessage("");
+    }, []);
+
     async function handleLogout() {
         await requestJson("/auth/logout", { method: "POST" });
         setUser(null);
+        setLandingView("landing");
         setAuthMode("login");
         setAuthForm({ userName: "", email: "", password: "" });
         setAuthMessage("");
@@ -358,6 +521,15 @@ function App() {
         }
     }, [authSubmitting]);
 
+    const handleGoogleFallback = useCallback(() => {
+        if (!GOOGLE_CLIENT_ID || !googleInitializedRef.current || typeof window === "undefined" || !window.google?.accounts?.id) {
+            setAuthMessage("Google sign-in is still loading. Please try again in a moment.");
+            return;
+        }
+
+        window.google.accounts.id.prompt();
+    }, []);
+
     useEffect(() => {
         if (user || !GOOGLE_CLIENT_ID || !googleButtonRef.current) {
             return;
@@ -372,6 +544,7 @@ function App() {
                 client_id: GOOGLE_CLIENT_ID,
                 callback: response => handleGoogleLogin(response.credential),
             });
+            googleInitializedRef.current = true;
             googleButtonRef.current.replaceChildren();
             window.google.accounts.id.renderButton(googleButtonRef.current, {
                 theme: "outline",
@@ -394,7 +567,7 @@ function App() {
         }, 100);
 
         return () => window.clearInterval(renderInterval);
-    }, [authLoading, authMode, handleGoogleLogin, user]);
+    }, [authLoading, authMode, handleGoogleLogin, landingView, user]);
 
     if (authLoading) {
         return <div className="app auth-loading"><div className="loading-card"><div className="brand-mark">₹</div><LoadingIndicator label="Loading your workspace..." /></div></div>;
@@ -405,6 +578,14 @@ function App() {
     }
 
     if (!user) {
+        if (landingView === "landing") {
+            return (
+                <LandingPage
+                    onGetStarted={() => openAuthFlow("register")}
+                />
+            );
+        }
+
         return (
             <div className="app auth-app">
                 <div className="auth-visual">
@@ -441,14 +622,19 @@ function App() {
                     </form>
                     {GOOGLE_CLIENT_ID && <>
                         <div className="auth-divider"><span>or continue with</span></div>
-                        <div className="google-login-button" ref={googleButtonRef} />
+                        <div className="google-auth-tools">
+                            <div className="google-login-button" ref={googleButtonRef} />
+                            <button type="button" className="google-fallback-button" onClick={handleGoogleFallback}>
+                                <span aria-hidden="true">G</span>
+                                {authMode === "login" ? "Sign in with Google" : "Sign up with Google"}
+                            </button>
+                        </div>
                     </>}
                     {authMessage && <div className="status-banner error">{authMessage}</div>}
                     <button type="button" className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
                         {authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}
                     </button>
                         </div>
-                        <MarketTicker />
                     </div>
                 </div>
             </div>
