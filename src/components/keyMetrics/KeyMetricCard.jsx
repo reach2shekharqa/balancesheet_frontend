@@ -151,8 +151,8 @@ function KeyMetricCard({ metric, isExpanded = false, onToggle }) {
                     ))}
                     {calculation?.inputs?.length > 0 && (
                         <div className="key-metric-inputs">
-                            <strong>Values extracted from your uploaded PDF</strong>
-                            <span className="key-metric-source-note">These are the source line items used for this metric.</span>
+                            <strong>Validated analytics values</strong>
+                            <span className="key-metric-source-note">These are the analytics values used for this metric.</span>
                             <div className="key-metric-input-head"><span>Line item</span><span>{calculation.currentPeriod ?? "Current"}</span><span>{calculation.previousPeriod ?? "Previous"}</span></div>
                             {calculation.inputs.map(input => (
                                 <div className="key-metric-input-row" key={input.label}>
