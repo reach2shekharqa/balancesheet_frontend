@@ -586,6 +586,22 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .key-metric-period, .key-metric-reason { color: var(--muted); font-size: 12px; }
 .key-metric-description { margin: 0; color: var(--subtle); font-size: 11px; line-height: 1.45; }
 .key-metric-reason { line-height: 1.5; }
+.key-metric-details { position: relative; z-index: 1; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.key-metric-details summary { padding-top: 10px; color: var(--accent-dark); cursor: pointer; font-size: 10px; font-weight: 800; }
+.key-metric-details-content { display: grid; gap: 8px; padding-top: 9px; line-height: 1.4; }
+.key-metric-details-content p { display: grid; gap: 3px; margin: 0; }
+.key-metric-details-content p > strong { display: block; }
+.key-metric-details-content p > span { display: block; }
+.key-metric-equation { padding: 7px 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); }
+.key-metric-equation span { color: var(--ink); font-weight: 700; overflow-wrap: anywhere; }
+.key-metric-details-content strong, .key-metric-inputs > strong { color: var(--ink); font-size: 10px; }
+.key-metric-inputs { display: grid; gap: 4px; min-width: 0; }
+.key-metric-source-note { color: var(--subtle); font-size: 9px; }
+.key-metric-input-head, .key-metric-input-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(62px, 1fr) minmax(62px, 1fr); gap: 6px; align-items: center; }
+.key-metric-input-head { color: var(--subtle); font-size: 9px; }
+.key-metric-input-row { color: var(--muted); }
+.key-metric-input-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.key-metric-input-value { overflow: hidden; color: var(--ink); font-size: 10px; font-weight: 800; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
 .key-metrics-empty { padding: 32px; color: var(--muted); text-align: center; }
 .metric-trend { padding: 4px 7px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: capitalize; }
 .metric-trend-up { background: var(--success-soft); color: var(--success); }

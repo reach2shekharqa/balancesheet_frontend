@@ -40,7 +40,7 @@ function ProfitLossExpensesChart({ analyticsData }) {
         },
         tooltip: {
             trigger: "item",
-            valueFormatter: value => Number(value).toLocaleString(),
+            formatter: params => `${params.name}<br/>${Number(params.value).toLocaleString()} (${params.percent}%)`,
         },
         legend: {
             orient: "vertical",
@@ -48,16 +48,26 @@ function ProfitLossExpensesChart({ analyticsData }) {
             top: "middle",
             type: "scroll",
             height: 260,
+            width: 290,
+            itemGap: 10,
+            textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
         series: [{
             name: `${selectedYear} expenses`,
             type: "pie",
             radius: ["35%", "68%"],
-            center: ["58%", "56%"],
+            center: ["70%", "56%"],
             data: chartData,
             itemStyle: { borderColor: "#ffffff", borderWidth: 2 },
-            label: { formatter: "{b}: {d}%" },
+            label: { show: false },
             emphasis: { itemStyle: { shadowBlur: 12, shadowColor: "rgba(23, 33, 43, .18)" } },
+        }],
+        media: [{
+            query: { maxWidth: 700 },
+            option: {
+                legend: { left: 12, right: 12, top: "72%", width: undefined, height: 86, orient: "horizontal" },
+                series: [{ center: ["50%", "36%"], radius: ["25%", "52%"] }],
+            },
         }],
     };
 

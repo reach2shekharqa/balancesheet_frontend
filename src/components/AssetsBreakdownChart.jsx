@@ -40,23 +40,30 @@ function AssetsBreakdownChart({ analyticsData }) {
 
         tooltip: {
             trigger: "item",
-            formatter: "{b}: {c} ({d}%)",
+            formatter: params => `${params.name}<br/>${Number(params.value).toLocaleString()} (${params.percent}%)`,
         },
 
         legend: {
             orient: "vertical",
-            left: "left",
+            left: 20,
             top: "middle",
+            type: "scroll",
+            height: 260,
+            width: 290,
+            itemGap: 10,
+            textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
 
         series: [
             {
                 name: `Assets ${latestYear ?? "Latest"}`,
                 type: "pie",
-                radius: ["35%", "70%"],
-                center: ["55%", "55%"],
+                radius: ["35%", "68%"],
+                center: ["70%", "55%"],
 
                 data: chartData,
+
+                itemStyle: { borderColor: "#ffffff", borderWidth: 2 },
 
                 emphasis: {
                     itemStyle: {
@@ -66,11 +73,17 @@ function AssetsBreakdownChart({ analyticsData }) {
                 },
 
                 label: {
-                    show: true,
-                    formatter: "{b}: {d}%",
+                    show: false,
                 },
             },
         ],
+        media: [{
+            query: { maxWidth: 700 },
+            option: {
+                legend: { left: 12, right: 12, top: "72%", width: undefined, height: 86, orient: "horizontal" },
+                series: [{ center: ["50%", "36%"], radius: ["25%", "52%"] }],
+            },
+        }],
     };
 
     return (
