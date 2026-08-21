@@ -7,6 +7,7 @@ import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
 import { getValidYears } from "./utils/analyticsData";
 import ProfitLossComparisonChart from "./components/ProfitLossComparisonChart";
 import ProfitLossExpensesChart from "./components/ProfitLossExpensesChart";
+import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -158,13 +159,13 @@ function LandingPage({ onGetStarted }) {
                             <div className="analytics-preview">
                                 <div className="preview-toolbar">
                                     <div className="preview-brand"><span className="preview-brand-mark">₹</span><span>Financial overview</span></div>
-                                    <span className="preview-period">2024 / 25 <b>⌄</b></span>
+                                    <span className="preview-period">Latest period <b>⌄</b></span>
                                 </div>
                                 <div className="preview-heading"><div><span>Performance snapshot</span><strong>Business health at a glance</strong></div><span className="preview-status"><i /> Live analysis</span></div>
                                 <div className="preview-kpis">
-                                    <div><span>Revenue</span><strong>₹84.6L</strong><em>+18.4%</em></div>
-                                    <div><span>Net profit</span><strong>₹21.8L</strong><em>+12.8%</em></div>
-                                    <div><span>Cash position</span><strong>₹32.4L</strong><em>+8.6%</em></div>
+                                    <div><span>Revenue</span><strong>Available</strong><em>Tracked</em></div>
+                                    <div><span>Net profit</span><strong>Available</strong><em>Tracked</em></div>
+                                    <div><span>Cash position</span><strong>Available</strong><em>Tracked</em></div>
                                 </div>
                                 <div className="preview-chart-grid">
                                     <div className="preview-line-chart">
@@ -172,7 +173,7 @@ function LandingPage({ onGetStarted }) {
                                         <div className="line-chart-canvas" aria-label="Revenue trend rising over four years">
                                             <span className="chart-grid-line line-one" /><span className="chart-grid-line line-two" /><span className="chart-grid-line line-three" />
                                             <svg viewBox="0 0 340 150" role="img" aria-label="Rising revenue line chart"><defs><linearGradient id="preview-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#4f8cf7" stopOpacity=".28" /><stop offset="1" stopColor="#4f8cf7" stopOpacity="0" /></linearGradient></defs><path className="preview-area" d="M10 124 C48 112 64 110 92 96 S144 104 174 75 S225 78 252 52 S300 46 330 18 L330 145 L10 145 Z" /><path className="preview-line" d="M10 124 C48 112 64 110 92 96 S144 104 174 75 S225 78 252 52 S300 46 330 18" /><circle cx="330" cy="18" r="5" /></svg>
-                                            <div className="chart-axis"><span>2021</span><span>2022</span><span>2023</span><span>2024</span></div>
+                                            <div className="chart-axis"><span>Period 1</span><span>Period 2</span><span>Period 3</span><span>Latest</span></div>
                                         </div>
                                     </div>
                                     <div className="preview-pie-card"><div className="preview-chart-title"><strong>Expense mix</strong><span>Current year</span></div><div className="pie-wrap"><div className="preview-pie" aria-label="Expense mix pie chart" /><div className="pie-legend"><span><i className="legend-blue" /> Operations <b>48%</b></span><span><i className="legend-purple" /> People <b>32%</b></span><span><i className="legend-gold" /> Other <b>20%</b></span></div></div></div>
@@ -311,7 +312,6 @@ async function requestAnalytics(documentId, analyticsType) {
         ok: true,
         result,
     });
-
     return result;
 }
 
@@ -739,6 +739,7 @@ function App() {
     const latestReport = documents[0];
     const analyticsReady = analyticsData.assets && analyticsData.liabilities;
     const analyticsBusy = analyticsLoading.assets || analyticsLoading.liabilities;
+    const keyMetrics = analyticsData.profitLoss?.keyMetrics;
 
     return (
         <div className={`app workspace-app ${darkMode ? "theme-dark" : ""}`}>
@@ -788,7 +789,10 @@ function App() {
                         <div className="insights-heading-row">
                             <SectionHeader eyebrow="Financial intelligence" title="Explore your report" description="Switch between financial position and profitability without leaving the workspace." />
                             <div className="insight-mode-switcher" role="tablist" aria-label="Financial intelligence views">
-                                <button className={!["profitLoss", "profitComparison"].includes(activeChart) ? "is-active" : ""} onClick={() => setActiveChart("comparison")} role="tab" aria-selected={!['profitLoss', 'profitComparison'].includes(activeChart)}>
+                                <button className={activeChart === "keyMetrics" ? "is-active" : ""} onClick={() => setActiveChart("keyMetrics")} role="tab" aria-selected={activeChart === "keyMetrics"}>
+                                    <strong>Key Metrics</strong><span>Growth signals</span>
+                                </button>
+                                <button className={!['profitLoss', 'profitComparison', 'keyMetrics'].includes(activeChart) ? "is-active" : ""} onClick={() => setActiveChart("comparison")} role="tab" aria-selected={!['profitLoss', 'profitComparison', 'keyMetrics'].includes(activeChart)}>
                                     <strong>Balance sheet</strong><span>Assets & liabilities</span>
                                 </button>
                                 <button className={["profitLoss", "profitComparison"].includes(activeChart) ? "is-active" : ""} onClick={() => setActiveChart("profitLoss")} role="tab" aria-selected={["profitLoss", "profitComparison"].includes(activeChart)}>
@@ -798,7 +802,13 @@ function App() {
                         </div>
                         <div className="insights-workspace" id="insights-content">
                             <div className="insight-workspace-main">
-                                {["profitLoss", "profitComparison"].includes(activeChart) ? (
+                                {activeChart === "keyMetrics" ? (
+                                    analyticsData.profitLoss || analyticsLoading.profitLoss ? (
+                                        <section className="key-metrics-view" aria-label="Key metrics">
+                                            {analyticsLoading.profitLoss ? <div className="analytics-loading"><LoadingIndicator label="Loading key metrics..." /></div> : <KeyMetricsGrid keyMetrics={keyMetrics} />}
+                                        </section>
+                                    ) : <div className="insights-skeleton"><LoadingIndicator label={documentsLoading ? "Loading reports..." : "Loading key metrics..."} /><span /></div>
+                                ) : ["profitLoss", "profitComparison"].includes(activeChart) ? (
                                     (analyticsData.profitLoss || analyticsLoading.profitLoss) ? <>
                                         <div className="analytics-tabs" role="tablist" aria-label="Profit and loss analytics views">
                                             <button className={activeChart === "profitLoss" ? "is-active" : ""} onClick={() => setActiveChart("profitLoss")} role="tab" aria-selected={activeChart === "profitLoss"}>Expenses: {getValidYears(analyticsData.profitLoss)[0] || "Latest"} Breakdown</button>

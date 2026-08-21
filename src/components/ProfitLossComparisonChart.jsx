@@ -35,14 +35,14 @@ function ProfitLossComparisonChart({ analyticsData }) {
         tooltip: {
             trigger: "axis",
             axisPointer: { type: "shadow" },
-            valueFormatter: value => Number(value).toLocaleString("en-IN"),
+            valueFormatter: value => Number(value).toLocaleString(),
         },
         legend: { top: 22, right: 20, data: [latestYear, previousYear] },
         grid: { left: 180, right: 24, top: 82, bottom: 26, containLabel: true },
         xAxis: {
             type: "value",
             splitLine: { lineStyle: { color: "#edf0f3" } },
-            axisLabel: { color: "#71808e", formatter: value => Number(value).toLocaleString("en-IN") },
+            axisLabel: { color: "#71808e", formatter: value => Number(value).toLocaleString() },
         },
         yAxis: {
             type: "category",

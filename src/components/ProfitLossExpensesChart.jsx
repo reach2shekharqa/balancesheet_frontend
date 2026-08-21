@@ -6,10 +6,10 @@ const TOTAL_LABEL = /total|gross profit|operating profit|profit before|profit af
 
 function ProfitLossExpensesChart({ analyticsData }) {
     const years = getValidYears(analyticsData);
-    const selectedYear = years.includes("2025") ? "2025" : null;
+    const selectedYear = years[0] ?? null;
 
     if (!analyticsData?.dataset || !selectedYear) {
-        return <div className="chart-empty"><strong>2025 expense data unavailable</strong><p>The selected report does not include a 2025 profit and loss period.</p></div>;
+        return <div className="chart-empty"><strong>Expense data unavailable</strong><p>The selected report does not include a profit and loss period.</p></div>;
     }
 
     const expenseRows = analyticsData.dataset
@@ -26,12 +26,12 @@ function ProfitLossExpensesChart({ analyticsData }) {
         .filter(item => item.value > 0);
 
     if (chartData.length === 0) {
-        return <div className="chart-empty"><strong>No 2025 expense lines found</strong><p>The report contains a profit and loss statement, but no itemized expense values were detected.</p></div>;
+        return <div className="chart-empty"><strong>No expense lines found</strong><p>The report contains a profit and loss statement, but no itemized expense values were detected.</p></div>;
     }
 
     const option = {
         title: {
-            text: "Expenses: 2025 Breakdown",
+            text: `Expenses: ${selectedYear} Breakdown`,
             subtext: "Profit & loss expense composition",
             left: 20,
             top: 18,
@@ -40,7 +40,7 @@ function ProfitLossExpensesChart({ analyticsData }) {
         },
         tooltip: {
             trigger: "item",
-            valueFormatter: value => Number(value).toLocaleString("en-IN"),
+            valueFormatter: value => Number(value).toLocaleString(),
         },
         legend: {
             orient: "vertical",
@@ -50,7 +50,7 @@ function ProfitLossExpensesChart({ analyticsData }) {
             height: 260,
         },
         series: [{
-            name: "2025 expenses",
+            name: `${selectedYear} expenses`,
             type: "pie",
             radius: ["35%", "68%"],
             center: ["58%", "56%"],

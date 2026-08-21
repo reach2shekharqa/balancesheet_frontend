@@ -40,7 +40,7 @@ function AssetsComparisonChart({ analyticsData }) {
             bottom: 26,
             containLabel: true,
         },
-        xAxis: { type: "value", splitLine: { lineStyle: { color: "#edf0f3" } }, axisLabel: { color: "#71808e", formatter: value => Number(value).toLocaleString("en-IN") } },
+        xAxis: { type: "value", splitLine: { lineStyle: { color: "#edf0f3" } }, axisLabel: { color: "#71808e", formatter: value => Number(value).toLocaleString() } },
         yAxis: { type: "category", data: comparisonData.map(item => item.name), axisLabel: { color: "#4e5d6b", width: 130, overflow: "truncate" } },
         series: [
             {
