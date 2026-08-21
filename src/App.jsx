@@ -8,6 +8,12 @@ import { getValidYears } from "./utils/analyticsData";
 import ProfitLossComparisonChart from "./components/ProfitLossComparisonChart";
 import ProfitLossExpensesChart from "./components/ProfitLossExpensesChart";
 import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
+import analysisFeatureImage from "./assets/feature-analysis.svg";
+import balanceFeatureImage from "./assets/feature-balance.svg";
+import profitFeatureImage from "./assets/feature-profit.svg";
+import cashflowFeatureImage from "./assets/feature-cashflow.svg";
+import trendsFeatureImage from "./assets/feature-trends.svg";
+import insightsFeatureImage from "./assets/feature-insights.svg";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -47,45 +53,36 @@ function formatFileSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatReportName(filename, maxLength = 28) {
-    if (!filename || filename.length <= maxLength) return filename || "--";
-    const extensionIndex = filename.lastIndexOf(".");
-    const extension = extensionIndex > 0 ? filename.slice(extensionIndex) : "";
-    const base = extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
-    const visibleLength = Math.max(8, maxLength - extension.length - 3);
-    return `${base.slice(0, visibleLength)}...${extension}`;
-}
-
 const landingFeatures = [
     {
         title: "AI Financial Analysis",
         description: "Automatically analyse financial statements and extract meaningful insights.",
-        icon: "✦",
+        image: analysisFeatureImage,
     },
     {
         title: "Balance Sheet Analysis",
         description: "Understand assets, liabilities, borrowings, receivables, inventory and financial position.",
-        icon: "▣",
+        image: balanceFeatureImage,
     },
     {
         title: "Profit & Loss",
         description: "Track revenue, expenses, operating profit and net profit across reporting periods.",
-        icon: "↗",
+        image: profitFeatureImage,
     },
     {
         title: "Cash Flow",
         description: "Understand operating, investing and financing cash movements across the business.",
-        icon: "◌",
+        image: cashflowFeatureImage,
     },
     {
         title: "Year-over-Year Insights",
         description: "Compare financial periods and identify the shifts that matter most to growth.",
-        icon: "△",
+        image: trendsFeatureImage,
     },
     {
         title: "AI-Powered Insights",
         description: "Convert raw financial data into clear business conclusions and recommendations.",
-        icon: "◎",
+        image: insightsFeatureImage,
     },
 ];
 
@@ -157,6 +154,16 @@ function LandingPage({ onGetStarted }) {
                     <div className="landing-hero-visual" aria-label="Analytics dashboard preview">
                         <div className="landing-image-frame">
                             <div className="analytics-preview">
+                                <aside className="preview-sidebar" aria-label="Dashboard preview navigation">
+                                    <div className="preview-sidebar-brand"><span>₹</span><strong>FinSight</strong></div>
+                                    <span className="preview-sidebar-label">Workspace</span>
+                                    <span className="preview-sidebar-item is-active">▦ <b>Overview</b></span>
+                                    <span className="preview-sidebar-item">◒ <b>Reports</b></span>
+                                    <span className="preview-sidebar-item">↗ <b>Insights</b></span>
+                                    <span className="preview-sidebar-item">⚙ <b>Settings</b></span>
+                                    <div className="preview-sidebar-upgrade"><small>AI ANALYST</small><strong>Ready for review</strong><span>Upload a report to begin</span></div>
+                                </aside>
+                                <div className="preview-dashboard">
                                 <div className="preview-toolbar">
                                     <div className="preview-brand"><span className="preview-brand-mark">₹</span><span>Financial overview</span></div>
                                     <span className="preview-period">Latest period <b>⌄</b></span>
@@ -179,6 +186,7 @@ function LandingPage({ onGetStarted }) {
                                     <div className="preview-pie-card"><div className="preview-chart-title"><strong>Expense mix</strong><span>Current year</span></div><div className="pie-wrap"><div className="preview-pie" aria-label="Expense mix pie chart" /><div className="pie-legend"><span><i className="legend-blue" /> Operations <b>48%</b></span><span><i className="legend-purple" /> People <b>32%</b></span><span><i className="legend-gold" /> Other <b>20%</b></span></div></div></div>
                                 </div>
                                 <div className="preview-bottom"><span><i className="preview-insight-icon">✦</i><strong>AI insight</strong> Margins improved across the last 3 periods</span><b>View insights&nbsp; →</b></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -194,7 +202,9 @@ function LandingPage({ onGetStarted }) {
                     <div className="feature-grid">
                         {landingFeatures.map((feature) => (
                             <article className="feature-card" key={feature.title}>
-                                <div className="feature-icon" aria-hidden="true">{feature.icon}</div>
+                                <div className="feature-icon">
+                                    <img src={feature.image} alt="" aria-hidden="true" />
+                                </div>
                                 <h3>{feature.title}</h3>
                                 <p>{feature.description}</p>
                             </article>
@@ -736,7 +746,6 @@ function App() {
         }
     }
 
-    const latestReport = documents[0];
     const analyticsReady = analyticsData.assets && analyticsData.liabilities;
     const analyticsBusy = analyticsLoading.assets || analyticsLoading.liabilities;
     const keyMetrics = analyticsData.profitLoss?.keyMetrics;
@@ -774,7 +783,7 @@ function App() {
                     <section className="kpi-grid" aria-label="Workspace summary">
                         <div className="kpi-card"><span className="kpi-label">Reports analyzed</span><strong>{documents.length}</strong><span className="kpi-foot">In this session</span></div>
                         <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-positive" : ""}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
-                        <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={latestReport?.original_filename}>{formatReportName(latestReport?.original_filename)}</strong><span className="kpi-foot">PDF document</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={documents[0]?.original_filename}>{documents[0]?.original_filename || "--"}</strong><span className="kpi-foot">PDF document</span></div>
                     </section>
                     <section className="upload-section" id="upload">
                         <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
