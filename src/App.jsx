@@ -8,12 +8,6 @@ import { getValidYears } from "./utils/analyticsData";
 import ProfitLossComparisonChart from "./components/ProfitLossComparisonChart";
 import ProfitLossExpensesChart from "./components/ProfitLossExpensesChart";
 import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
-import analysisFeatureImage from "./assets/feature-analysis.svg";
-import balanceFeatureImage from "./assets/feature-balance.svg";
-import profitFeatureImage from "./assets/feature-profit.svg";
-import cashflowFeatureImage from "./assets/feature-cashflow.svg";
-import trendsFeatureImage from "./assets/feature-trends.svg";
-import insightsFeatureImage from "./assets/feature-insights.svg";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -52,39 +46,6 @@ function formatFileSize(bytes) {
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
-const landingFeatures = [
-    {
-        title: "AI Financial Analysis",
-        description: "Automatically analyse financial statements and extract meaningful insights.",
-        image: analysisFeatureImage,
-    },
-    {
-        title: "Balance Sheet Analysis",
-        description: "Understand assets, liabilities, borrowings, receivables, inventory and financial position.",
-        image: balanceFeatureImage,
-    },
-    {
-        title: "Profit & Loss",
-        description: "Track revenue, expenses, operating profit and net profit across reporting periods.",
-        image: profitFeatureImage,
-    },
-    {
-        title: "Cash Flow",
-        description: "Understand operating, investing and financing cash movements across the business.",
-        image: cashflowFeatureImage,
-    },
-    {
-        title: "Year-over-Year Insights",
-        description: "Compare financial periods and identify the shifts that matter most to growth.",
-        image: trendsFeatureImage,
-    },
-    {
-        title: "AI-Powered Insights",
-        description: "Convert raw financial data into clear business conclusions and recommendations.",
-        image: insightsFeatureImage,
-    },
-];
 
 const landingSteps = [
     {
@@ -192,24 +153,24 @@ function LandingPage({ onGetStarted }) {
                     </div>
                 </section>
 
-                <section className="landing-features" id="features">
-                    <div className="section-header landing-section-header">
-                        <div>
-                            <span className="eyebrow">Platform capabilities</span>
-                            <h2>Built for smarter financial decisions</h2>
-                        </div>
-                    </div>
-                    <div className="feature-grid">
-                        {landingFeatures.map((feature) => (
-                            <article className="feature-card" key={feature.title}>
-                                <div className="feature-icon">
-                                    <img src={feature.image} alt="" aria-hidden="true" />
-                                </div>
-                                <h3>{feature.title}</h3>
-                                <p>{feature.description}</p>
-                            </article>
-                        ))}
-                    </div>
+                <section className="landing-features landing-video-section" id="features" aria-label="Product preview">
+                    <video
+                        className="landing-feature-video"
+                        src="https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        onCanPlay={(event) => event.currentTarget.play().catch(() => {})}
+                        onPause={(event) => event.currentTarget.play().catch(() => {})}
+                        onTimeUpdate={(event) => {
+                            if (event.currentTarget.currentTime >= 2) {
+                                event.currentTarget.currentTime = 0;
+                            }
+                        }}
+                        aria-label="Financial analyzer product preview"
+                    />
                 </section>
 
                 <section className="landing-steps" id="how-it-works">

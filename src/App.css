@@ -226,6 +226,17 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
     margin-bottom: 20px;
 }
 
+.landing-feature-video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2.8 / 1;
+    border: 1px solid #dfe4e0;
+    border-radius: 7px;
+    background: #272928;
+    object-fit: cover;
+    box-shadow: 0 18px 38px rgba(31,39,34,.12);
+}
+
 .feature-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
