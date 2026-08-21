@@ -27,6 +27,22 @@ function formatMetricValue(metric, config) {
     return `${formattedValue}${metric.unit ?? ""}`;
 }
 
+function formatMetricChange(metric) {
+    if (metric?.change === null || metric?.change === undefined || !Number.isFinite(Number(metric.change))) {
+        return null;
+    }
+
+    const change = Number(metric.change);
+    const sign = change > 0 ? "+" : "";
+    const suffix = metric.changeType === "percentage_points"
+        ? " pp"
+        : metric.changeType === "growth_percent"
+            ? "%"
+            : metric.unit ?? "";
+
+    return `${metric.direction === "up" ? "↑" : metric.direction === "down" ? "↓" : "→"} ${sign}${change.toFixed(2)}${suffix}`;
+}
+
 function KeyMetricCard({ metric }) {
     const config = keyMetricConfig[metric?.metric] ?? {
         icon: "•",
@@ -48,8 +64,11 @@ function KeyMetricCard({ metric }) {
             <strong className={`key-metric-value ${isCalculated ? "" : "is-unavailable"}`}>
                 {formatMetricValue(metric, config)}
             </strong>
-            {metric?.currentYear && metric?.previousYear && (
-                <span className="key-metric-period">{metric.currentYear} vs {metric.previousYear}</span>
+            {formatMetricChange(metric) && (
+                <span className="key-metric-change">{formatMetricChange(metric)}</span>
+            )}
+            {metric?.currentPeriod && metric?.previousPeriod && (
+                <span className="key-metric-period">{metric.currentPeriod} vs {metric.previousPeriod}</span>
             )}
             <p className="key-metric-description">{metric?.description ?? config.description}</p>
             {!isCalculated && <span className="key-metric-reason">{metric?.reason || "Required data is unavailable"}</span>}
