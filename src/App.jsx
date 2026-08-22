@@ -90,7 +90,7 @@ function getWelcomeImageSources(dayPart) {
 function getDayPart(hour) {
     if (hour >= 5 && hour < 12) return "morning";
     if (hour >= 12 && hour < 17) return "afternoon";
-    if (hour >= 17 && hour < 21) return "evening";
+    if (hour >= 17 && hour < 22) return "evening";
     return "night";
 }
 
@@ -907,7 +907,7 @@ function App() {
                 <div className="content-grid" id="dashboard">
                     <section className={`welcome-panel welcome-panel-${dayPart}`}>
                         <img className="welcome-photo" src={welcomeImageUrl} alt="" aria-hidden="true" onError={() => setWelcomeImageIndex(index => index < welcomeImageSources.length - 1 ? index + 1 : index)} />
-                        <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : dayPart === "evening" ? "Good evening" : "Good night"}, {firstName}.</h2><p>{dayPartCopy} Upload a report to turn raw statements into useful insight.</p><a className="welcome-action" href="#upload">Review your numbers <span aria-hidden="true">→</span></a></div>
+                        <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : "Good evening"}, {firstName}.</h2><p>{dayPartCopy} Upload a report to turn raw statements into useful insight.</p><a className="welcome-action" href="#upload">Review your numbers <span aria-hidden="true">→</span></a></div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </section>
                     {documents.length > 0 && <section className="kpi-grid" aria-label="Workspace summary">
