@@ -8,6 +8,7 @@ import { getValidYears } from "./utils/analyticsData";
 import ProfitLossComparisonChart from "./components/ProfitLossComparisonChart";
 import ProfitLossExpensesChart from "./components/ProfitLossExpensesChart";
 import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
+import AdminDashboard from "./AdminDashboard";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -420,6 +421,12 @@ function App() {
             .finally(() => setAuthLoading(false));
     }, []);
 
+    useEffect(() => {
+        if (!authLoading && window.location.pathname.startsWith("/admin") && (!user || user.role !== "admin")) {
+            window.location.replace("/");
+        }
+    }, [authLoading, user]);
+
         async function loadAnalytics(documentId) {
             const requestId = analyticsRequestRef.current + 1;
             analyticsRequestRef.current = requestId;
@@ -669,6 +676,14 @@ function App() {
                 </div>
             </div>
         );
+    }
+
+    if (window.location.pathname.startsWith("/admin")) {
+        if (user.role !== "admin") {
+            return <div className="app auth-loading"><div className="loading-card"><div className="status-banner error">Admin access required.</div></div></div>;
+        }
+
+        return <AdminDashboard user={user} onLogout={handleLogout} />;
     }
 
 
