@@ -13,7 +13,8 @@ import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
 import KeyMetrics1A from "./components/keyMetrics/KeyMetrics1A";
 import { selectHistoricalData } from "./components/keyMetrics/keyMetrics1AData";
 import AdminDashboard from "./components/admin/AdminDashboard";
-import { canAnalyzeFiles, getBatchResultState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
+import { canAnalyzeFiles, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
+import { extractIdentityFromPdf } from "./utils/pdfIdentityPreflight";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
@@ -327,6 +328,7 @@ function App() {
     const [authSubmitting, setAuthSubmitting] = useState(false);
     const [landingView, setLandingView] = useState("landing");
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [identityState, setIdentityState] = useState({ status: "idle", identities: [], error: "" });
     const [uploadStatuses, setUploadStatuses] = useState([]);
     const [message, setMessage] = useState("");
     const [uploading, setUploading] = useState(false);
@@ -372,6 +374,43 @@ function App() {
     const fileInputRef = useRef(null);
     const messageTimeoutRef = useRef(null);
     const googleInitializedRef = useRef(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function validateSelectedIdentities() {
+            if (selectedFiles.length === 0) {
+                setIdentityState({ status: "idle", identities: [], error: "" });
+                return;
+            }
+            setIdentityState({ status: "checking", identities: [], error: "Checking report identity..." });
+            const fileHashes = await Promise.all(selectedFiles.map(async ({ file }) => {
+                const buffer = await file.arrayBuffer();
+                const digest = await window.crypto.subtle.digest("SHA-256", buffer);
+                file.fileHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+                return file.fileHash;
+            }));
+            let cachedDocuments = [];
+            try {
+                const result = await requestJson("/documents/identity", { method: "POST", body: JSON.stringify({ fileHashes }) });
+                cachedDocuments = result.documents ?? [];
+            } catch {
+                // Cache lookup is optional; new files must still be checked locally with PDF.js.
+            }
+            const cachedByHash = new Map(cachedDocuments.map(document => [document.fileHash, document.identity]));
+            const identities = await Promise.all(selectedFiles.map(async ({ file, name }) => {
+                const cached = cachedByHash.get(file.fileHash);
+                if (cached) return { fileHash: file.fileHash, identity: cached };
+                try {
+                    return { fileHash: file.fileHash, identity: { filename: name, ...(await extractIdentityFromPdf(file)) } };
+                } catch (error) {
+                    return { fileHash: file.fileHash, identity: { filename: name, status: "error", error: error.message, extractionError: error.debugMessage || "PDF.js could not read the file." } };
+                }
+            }));
+            if (!cancelled) setIdentityState(getIdentityValidationState(selectedFiles, identities));
+        }
+        validateSelectedIdentities();
+        return () => { cancelled = true; };
+    }, [selectedFiles]);
 
     useEffect(() => {
         const handleHashChange = () => setActiveSection(window.location.hash || "#dashboard");
@@ -719,6 +758,7 @@ function App() {
 
         setMessage(newFiles.length !== validFiles.length ? "Duplicate PDFs were skipped." : "");
         if (newFiles.length > 0) {
+            setIdentityState({ status: "checking", identities: [], error: "Checking report identity..." });
             setSelectedFiles(current => [...current, ...newFiles.map(file => ({ file, name: file.name, size: file.size }))]);
             setUploadStatuses([]);
         }
@@ -923,7 +963,8 @@ function App() {
                         </div>
                         {selectedFiles.length > 0 && <div className="selected-files selected-file-preview" aria-label="Selected reports"><div className="selected-files-heading">Selected reports</div><div className="selected-file-grid">{selectedFiles.map(({ file, name, size }) => { const identity = `${file.name}:${file.size}:${file.lastModified}`; return <div className="selected-file selected-file-card" key={identity} title={name}><span className="selected-file-icon" aria-hidden="true">PDF</span><strong title={name}>{name}</strong><small>{formatFileSize(size)}</small><button type="button" onClick={() => removeSelectedFile(identity)} disabled={uploading} aria-label={`Remove ${name}`} title={`Remove ${name}`}><span aria-hidden="true">−</span></button></div>; })}</div></div>}
                         {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">Analyzing reports</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
-                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canAnalyzeFiles(selectedFiles, uploading)}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
+                        {(identityState.status !== "idle" && !(identityState.status === "verified" && selectedFiles.length === 1)) && <div className={`identity-status identity-status-${identityState.status}`} aria-live="polite">{identityState.status === "verified" && selectedFiles.length > 1 ? <><strong>Reports verified</strong><span>Same company · CIN matched</span></> : identityState.status === "conflict" ? <><strong>Reports don't belong to the same company</strong><span>{identityState.error}</span></> : identityState.status === "incomplete" || identityState.status === "error" ? <><strong>Company identity could not be verified</strong><span>{identityState.error}</span></> : identityState.status === "checking" ? <span>Checking report identity...</span> : null}</div>}
+                                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canAnalyzeFiles(selectedFiles, uploading, identityState)}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
                         {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
                     {documents.length > 0 && <section className="insights-section" id="analytics" tabIndex="-1">

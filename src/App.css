@@ -893,6 +893,12 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .upload-button { min-width: 140px; }
 .file-status { color: var(--success); font-size: 12px; font-weight: 600; }
 .status-dot, .signal-dot { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--success); }
+.identity-status { display: grid; gap: 4px; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font-size: 12px; }
+.identity-status > strong { color: var(--ink); }
+.identity-status-verified { border-color: #c7eadb; background: var(--success-soft); }
+.identity-status-verified > strong { color: var(--success); }
+.identity-status-incomplete, .identity-status-conflict, .identity-status-error { border-color: #f0c7c5; background: var(--danger-soft); }
+.identity-status-incomplete > strong, .identity-status-conflict > strong, .identity-status-error > strong { color: var(--danger); }
 .status-banner { display: grid; gap: 2px; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font-size: 12px; }
 .status-banner strong { color: var(--ink); font-size: 12px; }
 .status-banner.loading { border-color: #bdd7f6; background: var(--accent-soft); }
