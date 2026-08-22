@@ -27,6 +27,7 @@ async function requestJson(path, options = {}) {
     if (!response.ok) {
         const error = new Error(result.error || "Request failed.");
         error.status = response.status;
+        Object.assign(error, result);
         throw error;
     }
 
@@ -258,6 +259,26 @@ function SectionHeader({ eyebrow, title, description, action }) {
     );
 }
 
+function UpgradeModal({ quota, onClose, onContact, onCheckout, checkoutLoading, checkoutError }) {
+    const isTopPlan = quota?.plan === "PLAN_250";
+    const nextPlan = quota?.plan === "FREE" ? "$99 Plan" : "$250 Plan";
+    return (
+        <>
+            <div className="quota-modal-backdrop" onClick={onClose} aria-hidden="true" />
+            <section className="quota-modal" role="dialog" aria-modal="true" aria-labelledby="quota-modal-title">
+                <button className="contact-close" onClick={onClose} aria-label="Close upgrade dialog">×</button>
+                <span className="quota-modal-mark" aria-hidden="true">↑</span>
+                <span className="eyebrow">{isTopPlan ? "Workspace capacity" : "Plan upgrade"}</span>
+                <h2 id="quota-modal-title">{isTopPlan ? "Upload limit reached" : quota?.plan === "FREE" ? "Upload limit reached" : "You've reached your limit"}</h2>
+                <p>You've used all {quota?.uploadQuota} PDF uploads.</p>
+                <div className="quota-usage"><div><strong>{quota?.uploadsUsed} / {quota?.uploadQuota}</strong><span>PDF uploads used</span></div><span className="quota-progress"><i style={{ width: "100%" }} /></span></div>
+                {isTopPlan ? <><p>Please contact support to increase your upload capacity.</p><button className="primary-button" onClick={onContact}>Contact Support</button></> : <><p>Upgrade to the {nextPlan} to continue analyzing your financial documents.</p><div className="upgrade-offer"><div><strong>{nextPlan}</strong><span>{quota?.plan === "FREE" ? "25 PDF uploads" : "Up to 250 PDF uploads"}</span><span>More room for your reports</span></div><strong className="upgrade-price">{quota?.plan === "FREE" ? "$99" : "$250"}</strong></div><button className="primary-button quota-cta" onClick={onCheckout} disabled={checkoutLoading}>{checkoutLoading ? <LoadingIndicator label="Opening checkout..." /> : `Upgrade for ${quota?.plan === "FREE" ? "$99" : "$250"}`}</button>{checkoutError && <div className="quota-checkout-error" role="alert">{checkoutError}</div>}</>}
+                <button className="secondary-button quota-dismiss" onClick={onClose}>{isTopPlan ? "Close" : "Maybe later"}</button>
+            </section>
+        </>
+    );
+}
+
 const appDocs = [
     { title: "Getting started", text: "Sign in to your workspace, upload a PDF financial report, and choose Analyze report to begin document processing." },
     { title: "Uploading reports", text: "Use the upload area to select or drop a PDF. Reports up to 25 MB are supported. The latest report appears in your dashboard summary." },
@@ -309,6 +330,10 @@ function App() {
     const [documents, setDocuments] = useState([]);
     const [activeDocumentId, setActiveDocumentId] = useState(null);
     const [documentsLoading, setDocumentsLoading] = useState(false);
+    const [quota, setQuota] = useState(null);
+    const [quotaModalOpen, setQuotaModalOpen] = useState(false);
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
+    const [checkoutError, setCheckoutError] = useState("");
     const [activeChart, setActiveChart] = useState("comparison");
     const [activeSection, setActiveSection] = useState(() => window.location.hash || "#dashboard");
     const [darkMode, setDarkMode] = useState(() => window.localStorage.getItem("financial-theme") === "dark");
@@ -345,13 +370,32 @@ function App() {
         return () => window.removeEventListener("hashchange", handleHashChange);
     }, []);
 
+    async function loadQuota() {
+        const result = await requestJson("/documents/quota");
+        setQuota(result);
+        return result;
+    }
+
+    useEffect(() => {
+        if (!user) return;
+        const refreshQuota = async () => {
+            try {
+                await loadQuota();
+            } catch {
+                return;
+            }
+        };
+        refreshQuota();
+    }, [user]);
+
     useEffect(() => {
         const clock = window.setInterval(() => setCurrentTime(new Date()), 60 * 1000);
         return () => window.clearInterval(clock);
     }, []);
 
     useEffect(() => {
-        setWelcomeImageIndex(0);
+        const resetImage = window.setTimeout(() => setWelcomeImageIndex(0), 0);
+        return () => window.clearTimeout(resetImage);
     }, [currentDayPart]);
 
     useEffect(() => {
@@ -633,7 +677,9 @@ function App() {
 
         setFile(selectedFile || null);
         setMessage("");
-        setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+        if (!activeDocumentId) {
+            setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+        }
         setActiveChart("comparison");
     }
 
@@ -656,7 +702,9 @@ function App() {
         }
         setUploading(true);
         setAnalyticsLoading({ assets: false, liabilities: false, profitLoss: false });
-        setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+        if (!activeDocumentId) {
+            setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+        }
         setActiveChart("comparison");
         setMessage("Uploading PDF...");
 
@@ -673,7 +721,9 @@ function App() {
             const uploadResult = await uploadResponse.json();
             console.log("Upload Result:", uploadResult);
             if (!uploadResponse.ok) {
-                throw new Error(uploadResult.error || "Upload failed.");
+                const error = new Error(uploadResult.message || uploadResult.error || "Upload failed.");
+                Object.assign(error, uploadResult);
+                throw error;
             }
 
             const nextDocumentId = uploadResult?.document?.id ?? uploadResult?.id ?? null;
@@ -688,6 +738,7 @@ function App() {
             await loadAnalytics(nextDocumentId);
             const documentsResult = await requestJson("/documents");
             setDocuments(documentsResult.documents ?? []);
+            await loadQuota();
             setMessage("Balance sheet analytics loaded successfully.");
             setFile(null);
             if (fileInputRef.current) {
@@ -700,10 +751,31 @@ function App() {
             focusAnalytics();
         } catch (error) {
             console.error("Upload / analytics error:", error);
-            setMessage("Unable to load balance sheet analytics. Please try again.");
+            if (error.code === "UPLOAD_QUOTA_EXCEEDED") {
+                setQuota({ plan: error.plan, uploadsUsed: error.uploadsUsed, uploadQuota: error.uploadQuota });
+                setCheckoutError("");
+                setQuotaModalOpen(true);
+                setMessage("");
+            } else {
+                setMessage("Unable to load balance sheet analytics. Please try again.");
+            }
         } finally {
             setUploading(false);
             setAnalyticsLoading({ assets: false, liabilities: false, profitLoss: false });
+        }
+    }
+
+    async function handleCheckout() {
+        setCheckoutLoading(true);
+        setCheckoutError("");
+        try {
+            const result = await requestJson("/subscriptions/checkout", { method: "POST", body: JSON.stringify({ plan: quota?.plan === "FREE" ? "PLAN_99" : "PLAN_250" }) });
+            if (result.checkoutUrl) window.location.assign(result.checkoutUrl);
+            else throw new Error("Checkout is unavailable.");
+        } catch (error) {
+            setCheckoutError(error.message || "Checkout could not be created. Please try again.");
+        } finally {
+            setCheckoutLoading(false);
         }
     }
 
@@ -727,7 +799,9 @@ function App() {
             if (droppedFile?.type === "application/pdf") {
                 setFile(droppedFile);
                 setMessage("");
-                setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+                if (!activeDocumentId) {
+                    setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+                }
             } else if (droppedFile) {
                 setMessage("Please choose a PDF financial report.");
             }
@@ -779,11 +853,11 @@ function App() {
                         <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : dayPart === "evening" ? "Good evening" : "Good night"}, {firstName}.</h2><p>{dayPartCopy} Upload a report to turn raw statements into useful insight.</p><a className="welcome-action" href="#upload">Review your numbers <span aria-hidden="true">→</span></a></div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </section>
-                    <section className="kpi-grid" aria-label="Workspace summary">
+                    {documents.length > 0 && <section className="kpi-grid" aria-label="Workspace summary">
                         <div className="kpi-card"><span className="kpi-label">Reports analyzed</span><strong>{documents.length}</strong><span className="kpi-foot">In this session</span></div>
                         <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-positive" : ""}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
                         <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={documents[0]?.original_filename}>{documents[0]?.original_filename || "--"}</strong><span className="kpi-foot">PDF document</span></div>
-                    </section>
+                    </section>}
                     <section className="upload-section" id="upload">
                         <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
                         <div className={`upload-zone ${file ? "has-file" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
@@ -793,7 +867,7 @@ function App() {
                         <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!file || uploading}>{uploading ? <LoadingIndicator label="Processing report..." /> : "Analyze report"}</button>{file && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
                         {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
-                    <section className="insights-section" id="analytics" tabIndex="-1">
+                    {documents.length > 0 && <section className="insights-section" id="analytics" tabIndex="-1">
                         <div className="insights-heading-row">
                             <SectionHeader eyebrow="Financial intelligence" title="Explore your report" description="Switch between financial position and profitability without leaving the workspace." />
                             <div className="insight-mode-switcher" role="tablist" aria-label="Financial intelligence views">
@@ -836,7 +910,7 @@ function App() {
                                 )}
                             </div>
                         </div>
-                    </section>
+                    </section>}
                 </div>
                 {contactOpen && <div className="contact-backdrop" onClick={() => setContactOpen(false)} aria-hidden="true" />}
                 {contactOpen && <section className="contact-dialog" role="dialog" aria-modal="true" aria-labelledby="contact-title">
@@ -848,6 +922,7 @@ function App() {
                         <button className="primary-button" type="submit">Send message</button>
                     </form>}
                 </section>}
+                {quotaModalOpen && <UpgradeModal quota={quota} onClose={() => setQuotaModalOpen(false)} onContact={() => { setQuotaModalOpen(false); setContactSent(false); setContactOpen(true); }} onCheckout={handleCheckout} checkoutLoading={checkoutLoading} checkoutError={checkoutError} />}
                 {termsOpen && <div className="contact-backdrop" onClick={() => setTermsOpen(false)} aria-hidden="true" />}
                 {termsOpen && <section className="contact-dialog policy-dialog" role="dialog" aria-modal="true" aria-labelledby="terms-title">
                     <div className="contact-dialog-head"><div><span className="eyebrow">Policy</span><h2 id="terms-title">Financial Analyzer Terms</h2></div><button className="contact-close" onClick={() => setTermsOpen(false)} aria-label="Close terms dialog">×</button></div>
