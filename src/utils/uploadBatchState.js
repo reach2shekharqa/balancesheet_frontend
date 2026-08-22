@@ -60,9 +60,8 @@ export function getIdentityValidationState(selectedFiles, cachedIdentities = [])
     if (conflictField) {
         const referenceValue = normalizedIdentities.find(identity => identity[conflictField])?.[conflictField];
         const conflict = normalizedIdentities.find(identity => identity[conflictField] && identity[conflictField] !== referenceValue);
-        const error = conflictField === "pan"
-            ? `${conflict.filename} contains conflicting company identity information. Please remove this file to continue.`
-            : `${conflict.filename} doesn't match the other selected reports. Please remove this file to continue.`;
+        const label = conflictField.toUpperCase();
+        const error = `${conflict.filename} has a ${label} mismatch. Its ${label} is ${conflict[conflictField]}, but the other selected reports use ${referenceValue}. Please remove this file to continue.`;
         return { status: "conflict", identities, error, filename: conflict.filename, field: conflictField.toUpperCase() };
     }
     return { status: "verified", identities, error: "" };

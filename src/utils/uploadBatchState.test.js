@@ -54,6 +54,7 @@ test("different PAN creates a conflict even when CIN matches", () => {
     ]);
     assert.equal(state.status, "conflict");
     assert.equal(state.field, "PAN");
+    assert.match(state.error, /PAN mismatch/);
     assert.equal(canAnalyzeFiles(files, false, state), false);
 });
 
@@ -65,7 +66,7 @@ test("different CIN and PAN creates a conflict", () => {
         { fileHash: "1".repeat(64), identity: { cin: "CIN002", pan: "PAN002" } },
     ]);
     assert.equal(state.status, "conflict");
-    assert.match(state.error, /^B\.pdf doesn't match the other selected reports\./);
+    assert.match(state.error, /^B\.pdf has a CIN mismatch\./);
     assert.equal(canAnalyzeFiles(files, false, state), false);
 });
 
