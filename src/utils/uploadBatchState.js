@@ -50,8 +50,8 @@ export function getIdentityValidationState(selectedFiles, cachedIdentities = [])
     }
     const normalizedIdentities = identities.map(identity => ({
         ...identity,
-        cin: identity.cin ? String(identity.cin).replace(/[\s-]+/g, "").toUpperCase() : null,
-        pan: identity.pan ? String(identity.pan).replace(/[\s-]+/g, "").toUpperCase() : null,
+        cin: identity.cin ? String(identity.cin).replace(/[\s:;,#|/\-]+/g, "").toUpperCase() : null,
+        pan: identity.pan ? String(identity.pan).replace(/[\s:;,#|/\-]+/g, "").toUpperCase() : null,
     }));
     const conflictField = ["cin", "pan"].find(field => {
         const values = normalizedIdentities.map(identity => identity[field]).filter(Boolean);

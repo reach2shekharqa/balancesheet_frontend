@@ -38,3 +38,12 @@ test("leaves missing identity fields incomplete rather than guessing", () => {
     assert.equal(identity.pan, null);
     assert.equal(identity.companyName, "EXAMPLE PRIVATE LIMITED");
 });
+
+test("extracts CIN when the label contains repeated separators", () => {
+    for (const label of ["CIN-:", "CIN:", "CIN-"]) {
+        assert.equal(
+            extractIdentityFromPdfText(`${label} U12345HR2010PTC123456`).cin,
+            "U12345HR2010PTC123456"
+        );
+    }
+});

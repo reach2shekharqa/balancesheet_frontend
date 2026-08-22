@@ -1,5 +1,5 @@
 function normalizeIdentifier(value) {
-    return String(value ?? "").replace(/[\s-]+/g, "").toUpperCase();
+    return String(value ?? "").replace(/[\s:;,#|/\-]+/g, "").toUpperCase();
 }
 
 function normalizeCompanyName(value) {
@@ -15,15 +15,16 @@ function firstMatch(text, patterns) {
 }
 
 const CIN_VALUE_PATTERN = "([A-Z][0-9]{5}[\\s-]*[A-Z]{2}[\\s-]*[0-9]{4}[\\s-]*[A-Z]{3}[\\s-]*[0-9]{6})";
+const LABEL_SEPARATOR_PATTERN = "[\\s:#|\\-]*";
 
 export function extractIdentityFromPdfText(text) {
     const source = String(text ?? "");
     const cin = firstMatch(source, [
-        new RegExp(`\\b(?:CIN|corporate\\s+(?:identity|identification)|company\\s+identification)\\s+number\\s*[:#-]?\\s*${CIN_VALUE_PATTERN}\\b`, "i"),
-        new RegExp(`\\bCIN\\s*[:#-]?\\s*${CIN_VALUE_PATTERN}\\b`, "i"),
+        new RegExp(`\\b(?:CIN|corporate\\s+(?:identity|identification)|company\\s+identification)${LABEL_SEPARATOR_PATTERN}number${LABEL_SEPARATOR_PATTERN}${CIN_VALUE_PATTERN}\\b`, "i"),
+        new RegExp(`\\bCIN${LABEL_SEPARATOR_PATTERN}${CIN_VALUE_PATTERN}\\b`, "i"),
     ]);
     const pan = firstMatch(source, [
-        /\b(?:PAN|permanent\s+account\s+number)\s*[:#-]?\s*([A-Z]{5}[0-9]{4}[A-Z])\b/i,
+        new RegExp(`\\b(?:PAN|permanent\\s+account\\s+number)${LABEL_SEPARATOR_PATTERN}([A-Z]{5}[0-9]{4}[A-Z])\\b`, "i"),
     ]);
     const companyName = firstMatch(source, [
         /(?:company|legal)\s+name\s*[:|-]\s*([^\n|]+)/i,
