@@ -130,7 +130,7 @@ function KeyMetricCard({ metric, isExpanded = false, onToggle }) {
             <p className="key-metric-description">{metric?.description ?? config.description}</p>
             {!isCalculated && <span className="key-metric-reason">{metric?.reason || "Required data is unavailable"}</span>}
             <details className="key-metric-details" open={isExpanded}>
-                <summary onClick={() => onToggle?.(!isExpanded)}>Calculation details &amp; source values</summary>
+                <summary onClick={event => { event.preventDefault(); onToggle?.(!isExpanded); }}>Calculation details &amp; source values</summary>
                 <div className="key-metric-details-content">
                     <p><strong>What it tells you</strong><span>{meaning}</span></p>
                     <p><strong>Formula</strong><span>{formula}</span></p>

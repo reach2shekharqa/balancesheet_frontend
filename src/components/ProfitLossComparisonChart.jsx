@@ -53,6 +53,15 @@ function ProfitLossComparisonChart({ analyticsData }) {
             { name: latestYear, type: "bar", data: comparisonData.map(item => item.latestValue), barMaxWidth: 16, itemStyle: { color: "#1769d4" } },
             { name: previousYear, type: "bar", data: comparisonData.map(item => item.previousValue), barMaxWidth: 16, itemStyle: { color: "#8ca8c5" } },
         ],
+        media: [{
+            query: { maxWidth: 500 },
+            option: {
+                title: { left: 12, top: 12, textStyle: { fontSize: 14 } },
+                legend: { top: 46, left: 12, right: 12, itemGap: 8, textStyle: { fontSize: 10 } },
+                grid: { left: 82, right: 12, top: 82, bottom: 30, containLabel: true },
+                yAxis: { axisLabel: { width: 68, fontSize: 9 } },
+            },
+        }],
     };
 
     return (

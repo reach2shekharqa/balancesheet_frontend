@@ -11,6 +11,7 @@ import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const welcomeImageSeed = Math.floor(Math.random() * 100000);
 
 async function requestJson(path, options = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -35,7 +36,7 @@ async function requestJson(path, options = {}) {
 function LoadingIndicator({ label }) {
     return (
         <span className="loading-indicator" role="status">
-            <span className="spinner" aria-hidden="true" />
+            <span className="spinner" aria-hidden="true"><span>₹</span></span>
             {label}
         </span>
     );
@@ -45,6 +46,43 @@ function formatFileSize(bytes) {
     if (!bytes) return "PDF document";
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getLocalTimeZoneLabel() {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    const city = timeZone.split("/").pop()?.replaceAll("_", " ");
+    return city || "your local time";
+}
+
+function getWelcomeImageUrl(dayPart) {
+    const location = getLocalTimeZoneLabel();
+    const imageSets = {
+        morning: ["1497366754035-f200968a6e72", "1497366811353-6870744d04b2"],
+        afternoon: ["1497366216548-37526070297c", "1497366811353-6870744d04b2"],
+        evening: ["1497366811353-6870744d04b2", "1497366216548-37526070297c"],
+        night: ["1519681393784-d120267933ba", "1519608487953-e999c86e7455"],
+    };
+    const locationValue = [...location].reduce((total, character) => total + character.charCodeAt(0), 0);
+    const images = imageSets[dayPart];
+    const imageId = images[(locationValue + welcomeImageSeed) % images.length];
+    return `https://images.unsplash.com/photo-${imageId}?auto=format&fit=crop&w=1400&q=85&sig=${welcomeImageSeed}`;
+}
+
+function getWelcomeImageSources(dayPart) {
+    const location = getLocalTimeZoneLabel();
+    const query = encodeURIComponent(`${location} ${dayPart} finance office`);
+    return [
+        getWelcomeImageUrl(dayPart),
+        `https://source.unsplash.com/1400x500/?${query}&sig=${welcomeImageSeed}`,
+        `https://loremflickr.com/1400/500/${query}?lock=${welcomeImageSeed}-${dayPart}`,
+    ];
+}
+
+function getDayPart(hour) {
+    if (hour >= 5 && hour < 12) return "morning";
+    if (hour >= 12 && hour < 17) return "afternoon";
+    if (hour >= 17 && hour < 21) return "evening";
+    return "night";
 }
 
 const landingSteps = [
@@ -112,65 +150,28 @@ function LandingPage({ onGetStarted }) {
                         </div>
                     </div>
 
-                    <div className="landing-hero-visual" aria-label="Analytics dashboard preview">
-                        <div className="landing-image-frame">
-                            <div className="analytics-preview">
-                                <aside className="preview-sidebar" aria-label="Dashboard preview navigation">
-                                    <div className="preview-sidebar-brand"><span>₹</span><strong>FinSight</strong></div>
-                                    <span className="preview-sidebar-label">Workspace</span>
-                                    <span className="preview-sidebar-item is-active">▦ <b>Overview</b></span>
-                                    <span className="preview-sidebar-item">◒ <b>Reports</b></span>
-                                    <span className="preview-sidebar-item">↗ <b>Insights</b></span>
-                                    <span className="preview-sidebar-item">⚙ <b>Settings</b></span>
-                                    <div className="preview-sidebar-upgrade"><small>AI ANALYST</small><strong>Ready for review</strong><span>Upload a report to begin</span></div>
-                                </aside>
-                                <div className="preview-dashboard">
-                                <div className="preview-toolbar">
-                                    <div className="preview-brand"><span className="preview-brand-mark">₹</span><span>Financial overview</span></div>
-                                    <span className="preview-period">Latest period <b>⌄</b></span>
-                                </div>
-                                <div className="preview-heading"><div><span>Performance snapshot</span><strong>Business health at a glance</strong></div><span className="preview-status"><i /> Live analysis</span></div>
-                                <div className="preview-kpis">
-                                    <div><span>Revenue</span><strong>Available</strong><em>Tracked</em></div>
-                                    <div><span>Net profit</span><strong>Available</strong><em>Tracked</em></div>
-                                    <div><span>Cash position</span><strong>Available</strong><em>Tracked</em></div>
-                                </div>
-                                <div className="preview-chart-grid">
-                                    <div className="preview-line-chart">
-                                        <div className="preview-chart-title"><strong>Revenue trend</strong><span>Year over year</span></div>
-                                        <div className="line-chart-canvas" aria-label="Revenue trend rising over four years">
-                                            <span className="chart-grid-line line-one" /><span className="chart-grid-line line-two" /><span className="chart-grid-line line-three" />
-                                            <svg viewBox="0 0 340 150" role="img" aria-label="Rising revenue line chart"><defs><linearGradient id="preview-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#4f8cf7" stopOpacity=".28" /><stop offset="1" stopColor="#4f8cf7" stopOpacity="0" /></linearGradient></defs><path className="preview-area" d="M10 124 C48 112 64 110 92 96 S144 104 174 75 S225 78 252 52 S300 46 330 18 L330 145 L10 145 Z" /><path className="preview-line" d="M10 124 C48 112 64 110 92 96 S144 104 174 75 S225 78 252 52 S300 46 330 18" /><circle cx="330" cy="18" r="5" /></svg>
-                                            <div className="chart-axis"><span>Period 1</span><span>Period 2</span><span>Period 3</span><span>Latest</span></div>
-                                        </div>
-                                    </div>
-                                    <div className="preview-pie-card"><div className="preview-chart-title"><strong>Expense mix</strong><span>Current year</span></div><div className="pie-wrap"><div className="preview-pie" aria-label="Expense mix pie chart" /><div className="pie-legend"><span><i className="legend-blue" /> Operations <b>48%</b></span><span><i className="legend-purple" /> People <b>32%</b></span><span><i className="legend-gold" /> Other <b>20%</b></span></div></div></div>
-                                </div>
-                                <div className="preview-bottom"><span><i className="preview-insight-icon">✦</i><strong>AI insight</strong> Margins improved across the last 3 periods</span><b>View insights&nbsp; →</b></div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="landing-hero-visual">
+                        <section className="landing-features landing-video-section" id="features" aria-label="Product preview">
+                            <video
+                                className="landing-feature-video"
+                                src="https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                preload="metadata"
+                                onCanPlay={(event) => event.currentTarget.play().catch(() => {})}
+                                onPause={(event) => event.currentTarget.play().catch(() => {})}
+                                onTimeUpdate={(event) => {
+                                    if (event.currentTarget.currentTime >= 2) {
+                                        event.currentTarget.currentTime = 0;
+                                    }
+                                }}
+                                aria-label="Financial analyzer product preview"
+                            />
+                        </section>
                     </div>
-                </section>
 
-                <section className="landing-features landing-video-section" id="features" aria-label="Product preview">
-                    <video
-                        className="landing-feature-video"
-                        src="https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4"
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        onCanPlay={(event) => event.currentTarget.play().catch(() => {})}
-                        onPause={(event) => event.currentTarget.play().catch(() => {})}
-                        onTimeUpdate={(event) => {
-                            if (event.currentTarget.currentTime >= 2) {
-                                event.currentTarget.currentTime = 0;
-                            }
-                        }}
-                        aria-label="Financial analyzer product preview"
-                    />
                 </section>
 
                 <section className="landing-steps" id="how-it-works">
@@ -329,8 +330,13 @@ function App() {
     const [reportMenuOpen, setReportMenuOpen] = useState(false);
     const [reportHistoryOpen, setReportHistoryOpen] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [currentTime, setCurrentTime] = useState(() => new Date());
+    const currentDayPart = getDayPart(currentTime.getHours());
+    const [welcomeImageIndex, setWelcomeImageIndex] = useState(0);
     const analyticsRequestRef = useRef(0);
     const googleButtonRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const messageTimeoutRef = useRef(null);
     const googleInitializedRef = useRef(false);
 
     useEffect(() => {
@@ -338,6 +344,15 @@ function App() {
         window.addEventListener("hashchange", handleHashChange);
         return () => window.removeEventListener("hashchange", handleHashChange);
     }, []);
+
+    useEffect(() => {
+        const clock = window.setInterval(() => setCurrentTime(new Date()), 60 * 1000);
+        return () => window.clearInterval(clock);
+    }, []);
+
+    useEffect(() => {
+        setWelcomeImageIndex(0);
+    }, [currentDayPart]);
 
     useEffect(() => {
         window.localStorage.setItem("financial-theme", darkMode ? "dark" : "light");
@@ -635,6 +650,10 @@ function App() {
             return;
         }
 
+        if (messageTimeoutRef.current) {
+            window.clearTimeout(messageTimeoutRef.current);
+            messageTimeoutRef.current = null;
+        }
         setUploading(true);
         setAnalyticsLoading({ assets: false, liabilities: false, profitLoss: false });
         setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
@@ -670,6 +689,14 @@ function App() {
             const documentsResult = await requestJson("/documents");
             setDocuments(documentsResult.documents ?? []);
             setMessage("Balance sheet analytics loaded successfully.");
+            setFile(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+            messageTimeoutRef.current = window.setTimeout(() => {
+                setMessage("");
+                messageTimeoutRef.current = null;
+            }, 2500);
             focusAnalytics();
         } catch (error) {
             console.error("Upload / analytics error:", error);
@@ -710,11 +737,21 @@ function App() {
     const analyticsReady = analyticsData.assets && analyticsData.liabilities;
     const analyticsBusy = analyticsLoading.assets || analyticsLoading.liabilities;
     const keyMetrics = analyticsData.profitLoss?.keyMetrics;
+    const dayPart = currentDayPart;
+    const welcomeImageSources = getWelcomeImageSources(dayPart);
+    const welcomeImageUrl = welcomeImageSources[welcomeImageIndex];
+    const firstName = String(user.userName || "there").trim().split(/\s+/)[0];
+    const dayPartCopy = {
+        morning: "Start the day with a clear view of your numbers.",
+        afternoon: "Keep your financial decisions moving with confidence.",
+        evening: "Close the day knowing what your numbers are saying.",
+        night: "A clear financial view, whenever your next decision calls.",
+    }[dayPart];
 
     return (
         <div className={`app workspace-app ${darkMode ? "theme-dark" : ""}`}>
             {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
-            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation">Close</button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#documents" onClick={() => setMobileNavOpen(false)}>Documents</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}<button className="mobile-logout" onClick={() => { setMobileNavOpen(false); handleLogout(); }}>Log out</button></nav>}
+            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation"><span className="close-icon" aria-hidden="true"><span /><span /></span></button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#documents" onClick={() => setMobileNavOpen(false)}>Documents</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}<button className="mobile-logout" onClick={() => { setMobileNavOpen(false); handleLogout(); }}>Log out</button></nav>}
             <aside className="sidebar">
                 <div className="brand-lockup"><span className="brand-mark">₹</span><strong>Financial<br />Analyzer</strong></div>
                 <div className="sidebar-label">Workspace</div>
@@ -729,7 +766,7 @@ function App() {
             </aside>
             <main className="workspace-main">
                 <header className="topbar">
-                    <button className="mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" aria-expanded={mobileNavOpen}>Menu</button>
+                    <button className={`mobile-menu ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(open => !open)} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen}><span className="hamburger-icon" aria-hidden="true"><span /><span /><span /></span></button>
                     <div><span className="topbar-kicker">Workspace / Overview</span><h1>Dashboard</h1></div>
                     <div className="topbar-actions">
                         <button className="theme-toggle" onClick={() => setDarkMode(mode => !mode)} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={darkMode}><span className="theme-toggle-icon" aria-hidden="true">{darkMode ? "☀" : "◐"}</span><span>{darkMode ? "Light mode" : "Dark mode"}</span></button>
@@ -737,8 +774,9 @@ function App() {
                     </div>
                 </header>
                 <div className="content-grid" id="dashboard">
-                    <section className="welcome-panel">
-                        <div><span className="eyebrow">Financial intelligence</span><h2>Your numbers, in focus.</h2><p>Upload a financial report to generate a clear balance sheet view.</p></div>
+                    <section className={`welcome-panel welcome-panel-${dayPart}`}>
+                        <img className="welcome-photo" src={welcomeImageUrl} alt="" aria-hidden="true" onError={() => setWelcomeImageIndex(index => index < welcomeImageSources.length - 1 ? index + 1 : index)} />
+                        <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : dayPart === "evening" ? "Good evening" : "Good night"}, {firstName}.</h2><p>{dayPartCopy} Upload a report to turn raw statements into useful insight.</p><a className="welcome-action" href="#upload">Review your numbers <span aria-hidden="true">→</span></a></div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </section>
                     <section className="kpi-grid" aria-label="Workspace summary">
@@ -749,7 +787,7 @@ function App() {
                     <section className="upload-section" id="upload">
                         <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
                         <div className={`upload-zone ${file ? "has-file" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
-                            <input id="file-upload" className="file-input" type="file" accept=".pdf,application/pdf" onChange={handleFileChange} disabled={uploading} />
+                            <input id="file-upload" ref={fileInputRef} className="file-input" type="file" accept=".pdf,application/pdf" onChange={handleFileChange} disabled={uploading} />
                             <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{file ? file.name : "Drop your report here"}</strong><span>{file ? `${formatFileSize(file.size)} · PDF selected` : "or browse from your device"}</span><small>PDF files up to 25 MB</small></label>
                         </div>
                         <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!file || uploading}>{uploading ? <LoadingIndicator label="Processing report..." /> : "Analyze report"}</button>{file && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
