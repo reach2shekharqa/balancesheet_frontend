@@ -52,9 +52,9 @@ function MultiPeriodComparisonChart({ title, subtitle, sources, seriesDefinition
         media: [{
             query: { maxWidth: 560 },
             option: {
-                title: { left: 12, top: 12, textStyle: { fontSize: 14 } },
-                legend: { top: 48, left: 12, right: 12, itemGap: 8, textStyle: { fontSize: 10 } },
-                grid: { left: 52, right: 12, top: 88, bottom: 44, containLabel: true },
+                title: { left: 12, top: 12, text: "Comparison", subtext: "Values by period", textStyle: { fontSize: 14 }, subtextStyle: { fontSize: 10 } },
+                legend: { type: "plain", orient: "vertical", top: 44, left: 12, itemGap: 5, textStyle: { fontSize: 10 } },
+                grid: { left: 52, right: 12, top: 118, bottom: 44, containLabel: true },
                 xAxis: { axisLabel: { fontSize: 10 } },
             },
         }],

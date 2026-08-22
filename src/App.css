@@ -778,6 +778,10 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
     .insight-workspace-main .analytics-tabs { width: 100%; flex-wrap: wrap; }
     .insight-workspace-main .analytics-tabs button { flex: 1 1 110px; min-width: 0; white-space: normal; line-height: 1.2; }
     .assets-chart { width: 100%; min-width: 0; overflow: hidden; }
+    .key-metrics-1a-table { min-width: 0; table-layout: fixed; }
+    .key-metrics-1a-table th, .key-metrics-1a-table td { min-width: 0; padding: 10px 6px; white-space: normal; overflow-wrap: anywhere; }
+    .key-metrics-1a-table th:first-child, .key-metrics-1a-table tbody th { position: static; min-width: 0; width: 40%; }
+    .key-metrics-1a-table th:first-child, .key-metrics-1a-table tbody th { background: transparent; }
     .key-metrics-grid { grid-template-columns: 1fr; }
     .key-metric-card { min-height: 170px; }
     .key-metrics-details-backdrop { align-items: end; padding: 0; }

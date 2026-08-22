@@ -65,8 +65,9 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
         media: [{
             query: { maxWidth: 700 },
             option: {
-                legend: { left: 12, right: 12, top: "72%", width: undefined, height: 86, orient: "horizontal" },
-                series: [{ center: ["50%", "36%"], radius: ["25%", "52%"] }],
+                title: { left: 12, top: 12, text: "Liabilities breakdown", textStyle: { fontSize: 14 } },
+                legend: { left: 12, right: 12, top: "60%", width: undefined, height: 150, orient: "vertical", type: "scroll", itemGap: 6, textStyle: { fontSize: 10, width: 250 } },
+                series: [{ center: ["50%", "34%"], radius: ["23%", "43%"] }],
             },
         }],
     };
