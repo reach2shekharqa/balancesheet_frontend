@@ -25,6 +25,13 @@ test("supports company name label variants", () => {
     );
 });
 
+test("extracts a CIN split into PDF text segments", () => {
+    assert.equal(
+        extractIdentityFromPdfText("CIN: U12345 HR 2010 PTC 123456").cin,
+        "U12345HR2010PTC123456"
+    );
+});
+
 test("leaves missing identity fields incomplete rather than guessing", () => {
     const identity = extractIdentityFromPdfText("Legal Name: Example Private Limited");
     assert.equal(identity.cin, null);
