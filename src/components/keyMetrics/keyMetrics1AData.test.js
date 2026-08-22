@@ -76,9 +76,15 @@ test("comparison states use configured higher and lower directions", () => {
     const years = ["prior", "current"];
     const state = (metricName, previous, current) => getComparisonState({ metricName, values: { prior: previous, current } }, years);
 
+    assert.equal(state("revenueGrowth", 3, 4).state, "favorable");
     assert.equal(state("netProfitMargin", 3, 4).state, "favorable");
     assert.equal(state("netProfitMargin", 4, 3).state, "unfavorable");
+    assert.equal(state("ebitdaMargin", 3, 4).state, "favorable");
+    assert.equal(state("roe", 3, 4).state, "favorable");
+    assert.equal(state("roa", 3, 4).state, "favorable");
     assert.equal(state("debtToEquity", 4, 3).state, "favorable");
+    assert.equal(state("debtToEquity", 4, 3).arrow, "↓");
+    assert.equal(state("debtToEquity", 4, 3).label, "Improved");
     assert.equal(state("debtToEquity", 3, 4).state, "unfavorable");
     assert.equal(state("roe", 4, 4).state, "neutral");
 });
@@ -93,6 +99,18 @@ test("missing comparisons are unavailable and Current Ratio stays contextual", (
         currentPeriod: "current",
     });
     assert.equal(getComparisonState({ metricName: "currentRatio", values: { prior: 1, current: 9 } }, years).state, "neutral");
+});
+
+test("unknown or non-numeric metrics never receive a fabricated assessment", () => {
+    const years = ["prior", "current"];
+
+    assert.deepEqual(getComparisonState({ metricName: "newMetric", values: { prior: 1, current: 2 } }, years), {
+        state: "neutral",
+        arrow: "→",
+        label: "Contextual",
+        currentPeriod: "current",
+    });
+    assert.equal(getComparisonState({ metricName: "netProfitMargin", values: { prior: "not-a-number", current: 2 } }, years).label, "No comparison");
 });
 
 test("comparison uses supplied periods across multiple dynamic years", () => {

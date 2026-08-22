@@ -10,6 +10,15 @@ const metricPresentation = Object.freeze({
     roa: { direction: "higher" },
 });
 
+function getNumericComparisonValue(value) {
+    if (value === null || value === undefined || value === "") {
+        return null;
+    }
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+}
+
 export function formatHistoricalValue(value, unit = "") {
     if (value === null || value === undefined || value === "") {
         return "—";
@@ -97,20 +106,20 @@ export function getComparisonState(metric, years) {
     const values = metric?.values ?? {};
     const currentPeriod = metric?.currentPeriod ?? years.at(-1);
     const previousPeriod = metric?.previousPeriod ?? years.at(-2);
-    const currentValue = values[currentPeriod];
-    const previousValue = values[previousPeriod];
+    const currentValue = getNumericComparisonValue(values[currentPeriod]);
+    const previousValue = getNumericComparisonValue(values[previousPeriod]);
+    const presentation = metricPresentation[metric?.metricName];
 
-    if (currentValue === null || currentValue === undefined || currentValue === "" ||
-        previousValue === null || previousValue === undefined || previousValue === "") {
+    if (currentValue === null || previousValue === null) {
         return { state: "unavailable", arrow: "—", label: "No comparison", currentPeriod };
     }
 
-    if (metricPresentation[metric?.metricName]?.direction === "contextual") {
+    if (!presentation || presentation.direction === "contextual") {
         return { state: "neutral", arrow: "→", label: "Contextual", currentPeriod };
     }
 
     const movement = currentValue > previousValue ? "up" : currentValue < previousValue ? "down" : "flat";
-    const direction = metricPresentation[metric?.metricName]?.direction;
+    const direction = presentation.direction;
     const improved = movement === "flat" ? null : direction === "lower" ? movement === "down" : movement === "up";
 
     return {
