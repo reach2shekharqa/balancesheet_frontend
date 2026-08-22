@@ -1,13 +1,13 @@
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getValidYears, numericValue } from "../utils/analyticsData";
 
-function LiabilitiesBreakdownChart({ analyticsData }) {
+function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     if (!analyticsData?.dataset) {
         return <p>No liabilities data available to display.</p>;
     }
 
     const validYears = getValidYears(analyticsData);
-    const latestYear = validYears[0];
+    const latestYear = selectedYear ?? validYears[0];
 
     console.log("[Liabilities Breakdown] dataset:", analyticsData?.dataset);
     console.log("[Liabilities Breakdown] selected year:", latestYear);
@@ -31,7 +31,6 @@ function LiabilitiesBreakdownChart({ analyticsData }) {
         },
         tooltip: {
             trigger: "item",
-            formatter: params => `${params.name}<br/>${Number(params.value).toLocaleString()} (${params.percent}%)`,
         },
         legend: {
             orient: "vertical",
@@ -41,6 +40,7 @@ function LiabilitiesBreakdownChart({ analyticsData }) {
             height: 260,
             width: 290,
             itemGap: 10,
+            formatter: value => displayLabel(value),
             textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
         series: [

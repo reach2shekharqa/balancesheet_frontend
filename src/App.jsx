@@ -4,14 +4,21 @@ import "./App.css";
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
 import AssetsComparisonChart from "./components/AssetsComparisonChart";
 import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
+import BalanceSheet1A from "./components/BalanceSheet1A";
 import { getValidYears } from "./utils/analyticsData";
 import ProfitLossComparisonChart from "./components/ProfitLossComparisonChart";
 import ProfitLossExpensesChart from "./components/ProfitLossExpensesChart";
+import ProfitLoss1A from "./components/ProfitLoss1A";
 import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
-import AdminDashboard from "./AdminDashboard";
+import KeyMetrics1A from "./components/keyMetrics/KeyMetrics1A";
+import { selectHistoricalData } from "./components/keyMetrics/keyMetrics1AData";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import { canAnalyzeFiles, getBatchResultState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
+import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
 const welcomeImageSeed = Math.floor(Math.random() * 100000);
 
 async function requestJson(path, options = {}) {
@@ -319,7 +326,8 @@ function App() {
     const [authMessage, setAuthMessage] = useState("");
     const [authSubmitting, setAuthSubmitting] = useState(false);
     const [landingView, setLandingView] = useState("landing");
-    const [file, setFile] = useState(null);
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [uploadStatuses, setUploadStatuses] = useState([]);
     const [message, setMessage] = useState("");
     const [uploading, setUploading] = useState(false);
     const [analyticsLoading, setAnalyticsLoading] = useState({ assets: false, liabilities: false, profitLoss: false });
@@ -335,7 +343,7 @@ function App() {
     const [quotaModalOpen, setQuotaModalOpen] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [checkoutError, setCheckoutError] = useState("");
-    const [activeChart, setActiveChart] = useState("comparison");
+    const [activeChart, setActiveChart] = useState(defaultAnalyticsTab);
     const [activeSection, setActiveSection] = useState(() => window.location.hash || "#dashboard");
     const [darkMode, setDarkMode] = useState(() => window.localStorage.getItem("financial-theme") === "dark");
     const [contactOpen, setContactOpen] = useState(false);
@@ -529,7 +537,8 @@ function App() {
         setAuthMode("login");
         setAuthForm({ userName: "", email: "", password: "" });
         setAuthMessage("");
-        setFile(null);
+        setSelectedFiles([]);
+        setUploadStatuses([]);
         setDocuments([]);
         setActiveDocumentId(null);
         setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
@@ -688,14 +697,40 @@ function App() {
 
 
     function handleFileChange(event) {
-        const selectedFile = event.target.files[0];
+        addFiles(event.target.files);
+        event.target.value = "";
+    }
 
-        setFile(selectedFile || null);
-        setMessage("");
+    function addFiles(files) {
+        const validFiles = Array.from(files || []);
+        const invalidFile = validFiles.find(file => !file || typeof file.name !== "string" || (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")));
+        if (invalidFile) {
+            setMessage("Please choose PDF financial reports only.");
+            return;
+        }
+
+        const oversizedFile = validFiles.find(file => file.size > MAX_UPLOAD_SIZE_BYTES);
+        if (oversizedFile) {
+            setMessage(`${oversizedFile.name} is larger than 25 MB.`);
+            return;
+        }
+
+        const newFiles = mergeUniqueFiles(selectedFiles, validFiles);
+
+        setMessage(newFiles.length !== validFiles.length ? "Duplicate PDFs were skipped." : "");
+        if (newFiles.length > 0) {
+            setSelectedFiles(current => [...current, ...newFiles.map(file => ({ file, name: file.name, size: file.size }))]);
+            setUploadStatuses([]);
+        }
         if (!activeDocumentId) {
             setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
         }
-        setActiveChart("comparison");
+        setActiveChart(defaultAnalyticsTab);
+    }
+
+    function removeSelectedFile(identity) {
+        setSelectedFiles(current => removeFileByIdentity(current, identity));
+        setMessage("");
     }
 
     function focusAnalytics() {
@@ -706,10 +741,12 @@ function App() {
     }
 
     async function handleUpload() {
-        if (!file) {
-            setMessage("Please select a PDF first.");
+        if (selectedFiles.length === 0) {
+            setMessage("Please select at least one PDF first.");
             return;
         }
+
+        const filesToUpload = [...selectedFiles];
 
         if (messageTimeoutRef.current) {
             window.clearTimeout(messageTimeoutRef.current);
@@ -720,14 +757,15 @@ function App() {
         if (!activeDocumentId) {
             setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
         }
-        setActiveChart("comparison");
-        setMessage("Uploading PDF...");
+        setActiveChart(defaultAnalyticsTab);
+        setUploadStatuses(filesToUpload.map(({ name }) => ({ name, status: "processing" })));
+        setMessage(`Uploading ${filesToUpload.length} ${filesToUpload.length === 1 ? "report" : "reports"}...`);
 
         try {
             const formData = new FormData();
-            formData.append("file", file);
+            filesToUpload.forEach(({ file }) => formData.append("files[]", file));
 
-            const uploadResponse = await fetch(`${API_BASE_URL}/documents/upload`, {
+            const uploadResponse = await fetch(`${API_BASE_URL}/documents/upload-batch`, {
                 method: "POST",
                 body: formData,
                 credentials: "include",
@@ -741,10 +779,21 @@ function App() {
                 throw error;
             }
 
-            const nextDocumentId = uploadResult?.document?.id ?? uploadResult?.id ?? null;
+            const batchDocuments = uploadResult.documents ?? [];
+            setUploadStatuses(batchDocuments.map(document => ({
+                name: document.filename,
+                status: document.status,
+                fromCache: document.fromCache,
+                error: document.error
+            })));
+            const { completedDocumentId: nextDocumentId, isProcessing } = getBatchResultState(batchDocuments);
 
             if (!nextDocumentId) {
-                throw new Error("Upload succeeded but no document ID was returned.");
+                if (isProcessing) {
+                    setMessage("Reports are still processing. You can return to them from report history.");
+                    return;
+                }
+                throw new Error("No report was processed successfully.");
             }
 
             setMessage("Processing document...");
@@ -755,10 +804,7 @@ function App() {
             setDocuments(documentsResult.documents ?? []);
             await loadQuota();
             setMessage("Balance sheet analytics loaded successfully.");
-            setFile(null);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
+            setSelectedFiles([]);
             messageTimeoutRef.current = window.setTimeout(() => {
                 setMessage("");
                 messageTimeoutRef.current = null;
@@ -766,6 +812,7 @@ function App() {
             focusAnalytics();
         } catch (error) {
             console.error("Upload / analytics error:", error);
+            setUploadStatuses(filesToUpload.map(({ name }) => ({ name, status: "failed", error: error.message || "Upload failed." })));
             if (error.code === "UPLOAD_QUOTA_EXCEEDED") {
                 setQuota({ plan: error.plan, uploadsUsed: error.uploadsUsed, uploadQuota: error.uploadQuota });
                 setCheckoutError("");
@@ -810,22 +857,17 @@ function App() {
     function handleDrop(event) {
         event.preventDefault();
         if (!uploading) {
-            const droppedFile = event.dataTransfer.files[0];
-            if (droppedFile?.type === "application/pdf") {
-                setFile(droppedFile);
-                setMessage("");
-                if (!activeDocumentId) {
-                    setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
-                }
-            } else if (droppedFile) {
-                setMessage("Please choose a PDF financial report.");
-            }
+            addFiles(event.dataTransfer.files);
         }
     }
 
     const analyticsReady = analyticsData.assets && analyticsData.liabilities;
     const analyticsBusy = analyticsLoading.assets || analyticsLoading.liabilities;
     const keyMetrics = analyticsData.profitLoss?.keyMetrics;
+    const historicalData = selectHistoricalData(analyticsData.profitLoss);
+    const activeAnalyticsTab = visibleAnalyticsTabs.some(tab => isAnalyticsTabActive(tab, activeChart))
+        ? activeChart
+        : defaultAnalyticsTab;
     const dayPart = currentDayPart;
     const welcomeImageSources = getWelcomeImageSources(dayPart);
     const welcomeImageUrl = welcomeImageSources[welcomeImageIndex];
@@ -875,31 +917,37 @@ function App() {
                     </section>}
                     <section className="upload-section" id="upload">
                         <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
-                        <div className={`upload-zone ${file ? "has-file" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
-                            <input id="file-upload" ref={fileInputRef} className="file-input" type="file" accept=".pdf,application/pdf" onChange={handleFileChange} disabled={uploading} />
-                            <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{file ? file.name : "Drop your report here"}</strong><span>{file ? `${formatFileSize(file.size)} · PDF selected` : "or browse from your device"}</span><small>PDF files up to 25 MB</small></label>
+                        <div className={`upload-zone ${selectedFiles.length ? "has-file" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
+                            <input id="file-upload" ref={fileInputRef} className="file-input" type="file" accept=".pdf,application/pdf" multiple onChange={handleFileChange} disabled={uploading} />
+                            <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{selectedFiles.length ? "Add more PDF reports" : "Drop your reports here"}</strong><span>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "report" : "reports"} selected` : "or browse from your device"}</span><small>PDF files up to 25 MB each</small></label>
                         </div>
-                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!file || uploading}>{uploading ? <LoadingIndicator label="Processing report..." /> : "Analyze report"}</button>{file && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
+                        {selectedFiles.length > 0 && <div className="selected-files selected-file-preview" aria-label="Selected reports"><div className="selected-files-heading">Selected reports</div><div className="selected-file-grid">{selectedFiles.map(({ file, name, size }) => { const identity = `${file.name}:${file.size}:${file.lastModified}`; return <div className="selected-file selected-file-card" key={identity} title={name}><span className="selected-file-icon" aria-hidden="true">PDF</span><strong title={name}>{name}</strong><small>{formatFileSize(size)}</small><button type="button" onClick={() => removeSelectedFile(identity)} disabled={uploading} aria-label={`Remove ${name}`} title={`Remove ${name}`}><span aria-hidden="true">−</span></button></div>; })}</div></div>}
+                        {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">Analyzing reports</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
+                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canAnalyzeFiles(selectedFiles, uploading)}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && <span className="file-status"><span className="status-dot" /> Ready to analyze</span>}</div>
                         {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
                     {documents.length > 0 && <section className="insights-section" id="analytics" tabIndex="-1">
                         <div className="insights-heading-row">
                             <SectionHeader eyebrow="Financial intelligence" title="Explore your report" description="Switch between financial position and profitability without leaving the workspace." />
-                            <div className="insight-mode-switcher" role="tablist" aria-label="Financial intelligence views">
-                                <button className={activeChart === "keyMetrics" ? "is-active" : ""} onClick={() => setActiveChart("keyMetrics")} role="tab" aria-selected={activeChart === "keyMetrics"}>
-                                    <strong>Key Metrics</strong><span>Growth signals</span>
-                                </button>
-                                <button className={!['profitLoss', 'profitComparison', 'keyMetrics'].includes(activeChart) ? "is-active" : ""} onClick={() => setActiveChart("comparison")} role="tab" aria-selected={!['profitLoss', 'profitComparison', 'keyMetrics'].includes(activeChart)}>
-                                    <strong>Balance sheet</strong><span>Assets & liabilities</span>
-                                </button>
-                                <button className={["profitLoss", "profitComparison"].includes(activeChart) ? "is-active" : ""} onClick={() => setActiveChart("profitLoss")} role="tab" aria-selected={["profitLoss", "profitComparison"].includes(activeChart)}>
-                                    <strong>Profit & loss</strong><span>Revenue & expenses</span>
-                                </button>
+                            <div className="insight-mode-switcher" style={{ "--analytics-tab-count": visibleAnalyticsTabs.length }} role="tablist" aria-label="Financial intelligence views">
+                                {visibleAnalyticsTabs.map(tab => (
+                                    <button className={isAnalyticsTabActive(tab, activeAnalyticsTab) ? "is-active" : ""} onClick={() => setActiveChart(tab.value)} key={tab.id} role="tab" aria-selected={isAnalyticsTabActive(tab, activeAnalyticsTab)}>
+                                        <strong>{tab.label}</strong><span>{tab.subtitle}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                         <div className="insights-workspace" id="insights-content">
                             <div className="insight-workspace-main">
-                                {activeChart === "keyMetrics" ? (
+                                {activeAnalyticsTab === "balanceSheet1A" ? (
+                                    <BalanceSheet1A assets={analyticsData.assets} liabilities={analyticsData.liabilities} loading={analyticsLoading.assets || analyticsLoading.liabilities} />
+                                ) : activeAnalyticsTab === "profitLoss1A" ? (
+                                    <ProfitLoss1A analyticsData={analyticsData.profitLoss} loading={analyticsLoading.profitLoss} />
+                                ) : activeAnalyticsTab === "keyMetrics1A" ? (
+                                    <section className="key-metrics-1a-view" aria-label="Key Metrics 1A">
+                                        <KeyMetrics1A historicalData={historicalData} loading={analyticsLoading.profitLoss} />
+                                    </section>
+                                ) : activeChart === "keyMetrics" ? (
                                     analyticsData.profitLoss || analyticsLoading.profitLoss ? (
                                         <section className="key-metrics-view" aria-label="Key metrics">
                                             {analyticsLoading.profitLoss ? <div className="analytics-loading"><LoadingIndicator label="Loading key metrics..." /></div> : <KeyMetricsGrid keyMetrics={keyMetrics} />}

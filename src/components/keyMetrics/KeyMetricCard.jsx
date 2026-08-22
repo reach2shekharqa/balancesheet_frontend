@@ -1,4 +1,5 @@
 import keyMetricConfig from "./keyMetricConfig";
+import { displayLabel } from "../../utils/analyticsData";
 
 function formatMetricValue(metric, config) {
     if (metric?.status !== "calculated" || !Number.isFinite(Number(metric.value))) {
@@ -116,7 +117,7 @@ function KeyMetricCard({ metric, isExpanded = false, onToggle }) {
             <div className="key-metric-card-head">
                 <div className="key-metric-title">
                     <span className="key-metric-icon" aria-hidden="true">{config.icon}</span>
-                    <h3>{metric?.label || "Key metric"}</h3>
+                    <h3>{displayLabel(metric?.label || "Key metric")}</h3>
                 </div>
                 {trend && <span className={`metric-trend metric-trend-${trend}`}>{trend}</span>}
             </div>
@@ -143,7 +144,7 @@ function KeyMetricCard({ metric, isExpanded = false, onToggle }) {
                     {calculation?.inputs?.length > 0 && (
                         <p className="key-metric-equation">
                             <strong>Actual values used</strong>
-                            <span>{calculation.inputs.map(input => `${input.label}: ${calculation.currentPeriod ?? "Current period"} = ${formatInputValue(input.currentValue, metric)}; ${calculation.previousPeriod ?? "Previous period"} = ${formatInputValue(input.previousValue, metric)}`).join(" | ")}</span>
+                            <span>{calculation.inputs.map(input => `${displayLabel(input.label)}: ${calculation.currentPeriod ?? "Current period"} = ${formatInputValue(input.currentValue, metric)}; ${calculation.previousPeriod ?? "Previous period"} = ${formatInputValue(input.previousValue, metric)}`).join(" | ")}</span>
                         </p>
                     )}
                     {Object.entries(calculation?.derivedValues ?? {}).filter(([, value]) => value !== null && value !== undefined).map(([name, value]) => (
@@ -155,8 +156,8 @@ function KeyMetricCard({ metric, isExpanded = false, onToggle }) {
                             <span className="key-metric-source-note">These are the analytics values used for this metric.</span>
                             <div className="key-metric-input-head"><span>Line item</span><span>{calculation.currentPeriod ?? "Current"}</span><span>{calculation.previousPeriod ?? "Previous"}</span></div>
                             {calculation.inputs.map(input => (
-                                <div className="key-metric-input-row" key={input.label}>
-                                    <span title={input.label}>{input.label}</span>
+                                <div className="key-metric-input-row" key={input.key}>
+                                    <span title={displayLabel(input.label)}>{displayLabel(input.label)}</span>
                                     <strong className="key-metric-input-value">{formatInputValue(input.currentValue, metric)}</strong>
                                     <strong className="key-metric-input-value">{formatInputValue(input.previousValue, metric)}</strong>
                                 </div>

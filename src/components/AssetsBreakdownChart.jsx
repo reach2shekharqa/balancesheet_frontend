@@ -1,9 +1,9 @@
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getValidYears, numericValue } from "../utils/analyticsData";
 
-function AssetsBreakdownChart({ analyticsData }) {
+function AssetsBreakdownChart({ analyticsData, selectedYear = null }) {
     const validYears = getValidYears(analyticsData);
-    const latestYear = validYears[0];
+    const latestYear = selectedYear ?? validYears[0];
 
     console.log("[Assets Breakdown] dataset:", analyticsData?.dataset);
     console.log("[Assets Breakdown] selected year:", latestYear);
@@ -51,6 +51,7 @@ function AssetsBreakdownChart({ analyticsData }) {
             height: 260,
             width: 290,
             itemGap: 10,
+            formatter: value => displayLabel(value),
             textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
 

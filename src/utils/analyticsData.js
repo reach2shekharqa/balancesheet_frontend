@@ -22,5 +22,6 @@ export function numericValue(value) {
 export function displayLabel(label) {
     return String(label ?? "")
         .replace(/^\*+|\*+$/g, "")
+    .replace(/^(?:\s*(?:\(\s*[a-z0-9]+\s*\)|[a-z0-9]+\s*[.)]))+\s*/i, "")
         .trim();
 }

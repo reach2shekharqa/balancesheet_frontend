@@ -4,11 +4,11 @@ import { displayLabel, getValidYears, numericValue } from "../utils/analyticsDat
 const EXPENSE_LABEL = /expense|cost|depreciation|amortization|impairment|employee|payroll|administrative|selling|distribution|finance|interest|tax|purchase|stock|inventory|inventories|materials|material/i;
 const TOTAL_LABEL = /total|gross profit|operating profit|profit before|profit after|net income|net profit|ebit|revenue|sales|income/i;
 
-function ProfitLossExpensesChart({ analyticsData }) {
+function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
     const years = getValidYears(analyticsData);
-    const selectedYear = years[0] ?? null;
+    const displayedYear = selectedYear ?? years[0] ?? null;
 
-    if (!analyticsData?.dataset || !selectedYear) {
+    if (!analyticsData?.dataset || !displayedYear) {
         return <div className="chart-empty"><strong>Expense data unavailable</strong><p>The selected report does not include a profit and loss period.</p></div>;
     }
 
@@ -16,7 +16,7 @@ function ProfitLossExpensesChart({ analyticsData }) {
         .filter(row => row?.role === "expense" || String(row?.section ?? "").toLowerCase().includes("expense") || row?.role === "detail")
         .map(row => ({
             name: displayLabel(row.label),
-            value: numericValue(row.values?.[selectedYear]),
+            value: numericValue(row.values?.[displayedYear]),
         }))
         .filter(item => Number.isFinite(item.value));
 
@@ -31,7 +31,7 @@ function ProfitLossExpensesChart({ analyticsData }) {
 
     const option = {
         title: {
-            text: `Expenses: ${selectedYear} Breakdown`,
+            text: `Expenses: ${displayedYear} Breakdown`,
             subtext: "Profit & loss expense composition",
             left: 20,
             top: 18,
@@ -50,10 +50,11 @@ function ProfitLossExpensesChart({ analyticsData }) {
             height: 260,
             width: 290,
             itemGap: 10,
+            formatter: value => displayLabel(value),
             textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
         series: [{
-            name: `${selectedYear} expenses`,
+            name: `${displayedYear} expenses`,
             type: "pie",
             radius: ["35%", "68%"],
             center: ["70%", "56%"],
