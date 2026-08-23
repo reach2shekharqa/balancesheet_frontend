@@ -1183,7 +1183,7 @@ function App() {
                     </section>
                     {documents.length > 0 && <section className="kpi-grid" aria-label="Workspace summary">
                         <div className="kpi-card"><span className="kpi-label">Reports analyzed</span><strong>{documents.length}</strong><span className="kpi-foot">In this session</span></div>
-                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-positive" : ""}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-ready" : uploading || analyticsBusy ? "status-processing" : "status-waiting"}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
                         <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={documents[0]?.original_filename}>{documents[0]?.original_filename || "--"}</strong><span className="kpi-foot">PDF document</span></div>
                     </section>}
                     <section className="upload-section" id="upload">
