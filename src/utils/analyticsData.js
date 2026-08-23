@@ -52,7 +52,11 @@ function isExpenseSection(label) {
 }
 
 export function isExpensePieComponent(item) {
-    return isPieComponent(item) && isExpenseSection(item?.sourceSection ?? item?.section);
+    const sectionLabel = [item?.sourceSection, item?.section]
+        .filter(Boolean)
+        .join(" ");
+
+    return isPieComponent(item) && isExpenseSection(sectionLabel);
 }
 
 export const isComponentRow = isPieComponent;
