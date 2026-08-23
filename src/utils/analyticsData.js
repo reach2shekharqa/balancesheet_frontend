@@ -23,6 +23,38 @@ export function isPieComponent(item) {
     return item?.role === "detail";
 }
 
+function isExpenseSection(label) {
+    const words = String(label ?? "")
+        .toLowerCase()
+        .replace(/[^a-z]+/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    return words.some(word => {
+        if (word === "expense" || word === "expenses") {
+            return true;
+        }
+
+        if (Math.abs(word.length - 8) > 1) {
+            return false;
+        }
+
+        let edits = Math.abs(word.length - 8);
+        for (let index = 0; index < Math.min(word.length, 8); index++) {
+            if (word[index] !== "expenses"[index]) {
+                edits++;
+            }
+        }
+
+        return edits <= 1;
+    });
+}
+
+export function isExpensePieComponent(item) {
+    return isPieComponent(item) && isExpenseSection(item?.sourceSection ?? item?.section);
+}
+
 export const isComponentRow = isPieComponent;
 
 export function displayLabel(label) {

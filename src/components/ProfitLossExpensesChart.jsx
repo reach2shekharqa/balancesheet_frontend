@@ -1,5 +1,5 @@
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getValidYears, isPieComponent, numericValue } from "../utils/analyticsData";
+import { displayLabel, getValidYears, isExpensePieComponent, numericValue } from "../utils/analyticsData";
 
 function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
     const years = getValidYears(analyticsData);
@@ -10,7 +10,7 @@ function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
     }
 
     const expenseRows = analyticsData.dataset
-        .filter(isPieComponent)
+        .filter(isExpensePieComponent)
         .map(row => ({
             name: displayLabel(row.label),
             value: numericValue(row.values?.[displayedYear]),
