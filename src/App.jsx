@@ -996,7 +996,13 @@ function App() {
                 fromCache: document.fromCache,
                 error: document.error
             })));
-            const { completedDocumentId: nextDocumentId, isProcessing } = getBatchResultState(batchDocuments);
+            const { completedDocumentId: nextDocumentId, isProcessing, failure } = getBatchResultState(batchDocuments);
+
+            if (failure) {
+                const error = new Error(failure.message);
+                Object.assign(error, failure, { isBatchDocumentFailure: true });
+                throw error;
+            }
 
             if (!nextDocumentId) {
                 if (isProcessing) {
@@ -1022,14 +1028,20 @@ function App() {
             focusAnalytics();
         } catch (error) {
             console.error("Upload / analytics error:", error);
-            setUploadStatuses(filesToUpload.map(({ name }) => ({ name, status: "failed", error: error.message || "Upload failed." })));
+            if (!error.isBatchDocumentFailure) {
+                setUploadStatuses(filesToUpload.map(({ name }) => ({ name, status: "failed", error: error.message || "Upload failed." })));
+            }
             if (error.code === "UPLOAD_QUOTA_EXCEEDED") {
-                setQuota({ plan: error.plan, uploadsUsed: error.uploadsUsed, uploadQuota: error.uploadQuota });
+                setQuota({
+                    plan: error.plan ?? quota?.plan,
+                    uploadsUsed: error.uploadsUsed ?? quota?.uploadsUsed,
+                    uploadQuota: error.uploadQuota ?? quota?.uploadQuota,
+                });
                 setCheckoutError("");
                 setQuotaModalOpen(true);
                 setMessage("");
             } else {
-                setMessage(error.message || "Unable to load balance sheet analytics. Please try again.");
+                setMessage(error.isBatchDocumentFailure ? `Unable to upload document: ${error.message || "Upload failed."}` : error.message || "Unable to load balance sheet analytics. Please try again.");
             }
         } finally {
             setUploading(false);
@@ -1147,10 +1159,10 @@ function App() {
                             {canUploadActiveCompany ? <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{selectedFiles.length ? "Add more PDF reports" : "Drop your reports here"}</strong><span>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "report" : "reports"} selected` : "or browse from your device"}</span><small>PDF files up to 25 MB each</small></label> : <div className="upload-zone-content"><span className="upload-icon" aria-hidden="true">✓</span><strong>View existing reports</strong><span>Upload is available to OWNER members</span><small>Documents and analytics remain available below</small></div>}
                         </div>
                         {selectedFiles.length > 0 && <div className="selected-files selected-file-preview" aria-label="Selected reports"><div className="selected-files-heading">Selected reports</div><div className="selected-file-grid">{selectedFiles.map(({ file, name, size }) => { const identity = `${file.name}:${file.size}:${file.lastModified}`; return <div className="selected-file selected-file-card" key={identity} title={name}><span className="selected-file-icon" aria-hidden="true">PDF</span><strong title={name}>{name}</strong><small>{formatFileSize(size)}</small><button type="button" onClick={() => removeSelectedFile(identity)} disabled={uploading} aria-label={`Remove ${name}`} title={`Remove ${name}`}><span aria-hidden="true">−</span></button></div>; })}</div></div>}
-                        {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">Analyzing reports</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
+                        {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">{uploadStatuses.some(status => status.status === "failed") ? "Upload results" : "Analyzing reports"}</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
                         {(identityState.status !== "idle" && !(identityState.status === "verified" && selectedFiles.length === 1)) && <div className={`identity-status identity-status-${identityState.status}`} aria-live="polite">{identityState.status === "verified" && selectedFiles.length > 1 ? <><strong>Reports verified</strong><span>Same company · CIN matched</span></> : identityState.status === "conflict" ? <><strong>Reports don't belong to the same company</strong><span>{identityState.error}</span></> : identityState.status === "incomplete" || identityState.status === "error" ? <><strong>Company identity could not be verified</strong><span>{identityState.error}</span></> : identityState.status === "checking" ? <span>Checking report identity...</span> : null}</div>}
-                                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canUploadActiveCompany || !canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany))}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany)) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
-                        {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") || message.includes("permission") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") || message.includes("permission") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
+                                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canUploadActiveCompany || !canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany))}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && !uploadStatuses.some(status => status.status === "failed") && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany)) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
+                        {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") || message.includes("permission") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") || message.includes("permission") ? "Upload could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
                     {documents.length > 0 && <section className="insights-section" id="analytics" tabIndex="-1">
                         <div className="insights-heading-row">

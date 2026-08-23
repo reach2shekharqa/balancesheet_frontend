@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getFileIdentity, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./uploadBatchState.js";
+import { canAnalyzeFiles, canUploadForCompany, classifyUploadFailure, getBatchResultState, getFileIdentity, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./uploadBatchState.js";
 
 function pdf(name, lastModified = 1) {
     return { name, size: 10, lastModified };
@@ -175,6 +175,55 @@ test("pending-only batch remains processing without a completed id", () => {
         isProcessing: true,
         hasFailure: false
     });
+});
+
+test("completed batch remains on the normal analyzing path", () => {
+    assert.deepEqual(getBatchResultState([{ filename: "A.pdf", status: "completed", documentId: 42 }]), {
+        completedDocumentId: 42,
+        isProcessing: false,
+        hasFailure: false
+    });
+});
+
+test("quota failure uses the stable backend code", () => {
+    const state = getBatchResultState([{ filename: "A.pdf", status: "failed", code: "UPLOAD_QUOTA_EXCEEDED", error: "Your upload limit has been reached." }]);
+    assert.equal(state.failure.type, "quota");
+    assert.equal(state.failure.code, "UPLOAD_QUOTA_EXCEEDED");
+});
+
+test("authorization failure uses the stable backend code", () => {
+    assert.equal(classifyUploadFailure({ status: "failed", code: "COMPANY_UPLOAD_FORBIDDEN", error: "User is not authorized." }).type, "authorization");
+});
+
+test("extraction failure is classified from the backend message", () => {
+    assert.equal(classifyUploadFailure({ status: "failed", error: "Extraction failed while parsing the PDF." }).type, "extraction");
+});
+
+test("a mixed batch exposes failure before its completed document", () => {
+    const state = getBatchResultState([
+        { filename: "good.pdf", status: "completed", documentId: 42 },
+        { filename: "bad.pdf", status: "failed", error: "Invalid file." }
+    ]);
+    assert.equal(state.completedDocumentId, 42);
+    assert.equal(state.failure.type, "invalid-file");
+});
+
+test("an all-failed batch has no analyzing document", () => {
+    const state = getBatchResultState([
+        { filename: "A.pdf", status: "failed", error: "Duplicate file." },
+        { filename: "B.pdf", status: "failed", error: "Extraction failed." }
+    ]);
+    assert.equal(state.completedDocumentId, null);
+    assert.equal(state.isProcessing, false);
+    assert.equal(state.failure.type, "duplicate");
+});
+
+test("HTTP 200 with a failed document is still a failed upload workflow", () => {
+    const response = { status: 200, documents: [{ filename: "A.pdf", status: "failed", error: "Your upload limit has been reached." }] };
+    const state = getBatchResultState(response.documents);
+    assert.equal(response.status, 200);
+    assert.equal(state.hasFailure, true);
+    assert.equal(state.failure.type, "quota");
 });
 
 test("company name alone is insufficient for a multi-PDF batch", () => {

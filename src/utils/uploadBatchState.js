@@ -54,8 +54,8 @@ export function getIdentityValidationState(selectedFiles, cachedIdentities = [])
     }
     const normalizedIdentities = identities.map(identity => ({
         ...identity,
-        cin: identity.cin ? String(identity.cin).replace(/[\s:;,#|/\-]+/g, "").toUpperCase() : null,
-        pan: identity.pan ? String(identity.pan).replace(/[\s:;,#|/\-]+/g, "").toUpperCase() : null,
+        cin: identity.cin ? String(identity.cin).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
+        pan: identity.pan ? String(identity.pan).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
     }));
     const conflictField = ["cin", "pan"].find(field => {
         const values = normalizedIdentities.map(identity => identity[field]).filter(Boolean);
@@ -74,11 +74,48 @@ export function getIdentityValidationState(selectedFiles, cachedIdentities = [])
 export function getBatchResultState(documents) {
     const completedDocument = documents.find(document => document.documentId && document.status === "completed");
     const isProcessing = documents.some(document => ["processing", "waiting"].includes(document.status));
-    const hasFailure = documents.some(document => document.status === "failed");
+    const failedDocument = documents.find(document => document.status === "failed");
 
     return {
         completedDocumentId: completedDocument?.documentId ?? null,
         isProcessing,
-        hasFailure,
+        hasFailure: Boolean(failedDocument),
+        ...(failedDocument ? { failure: classifyUploadFailure(failedDocument) } : {}),
     };
+}
+
+const UPLOAD_FAILURE_CODES = Object.freeze({
+    QUOTA: "UPLOAD_QUOTA_EXCEEDED",
+    STORAGE_QUOTA: "STORAGE_QUOTA_EXCEEDED",
+    AUTHORIZATION: "COMPANY_UPLOAD_FORBIDDEN",
+    INVALID_FILE: "INVALID_FILE",
+    DUPLICATE: "DUPLICATE_FILE",
+    EXTRACTION: "EXTRACTION_FAILED",
+    UNKNOWN: "UPLOAD_FAILED",
+});
+
+export function classifyUploadFailure(document = {}) {
+    const code = document.code || document.errorCode || "";
+    const message = document.error || document.message || "Upload failed.";
+    const normalizedMessage = String(message).toLowerCase();
+
+    if (code === "STORAGE_QUOTA_EXCEEDED" || /storage\s+quota/i.test(normalizedMessage)) {
+        return { ...document, type: "storage-quota", code: UPLOAD_FAILURE_CODES.STORAGE_QUOTA, message };
+    }
+    if (code === "UPLOAD_QUOTA_EXCEEDED" || /upload\s+(limit|quota)|upload\s+quota\s+(exceeded|reached)/i.test(normalizedMessage)) {
+        return { ...document, type: "quota", code: UPLOAD_FAILURE_CODES.QUOTA, message };
+    }
+    if (code === "COMPANY_UPLOAD_FORBIDDEN" || /not authorized|permission|forbidden|unauthorized/i.test(normalizedMessage)) {
+        return { ...document, type: "authorization", code: UPLOAD_FAILURE_CODES.AUTHORIZATION, message };
+    }
+    if (code === "INVALID_FILE" || /invalid file|unsupported file|pdf file is required|file type/i.test(normalizedMessage)) {
+        return { ...document, type: "invalid-file", code: UPLOAD_FAILURE_CODES.INVALID_FILE, message };
+    }
+    if (code === "DUPLICATE_FILE" || /duplicate|already exists|already uploaded|rejected/i.test(normalizedMessage)) {
+        return { ...document, type: "duplicate", code: UPLOAD_FAILURE_CODES.DUPLICATE, message };
+    }
+    if (code === "EXTRACTION_FAILED" || /extract|extraction|parse/i.test(normalizedMessage)) {
+        return { ...document, type: "extraction", code: UPLOAD_FAILURE_CODES.EXTRACTION, message };
+    }
+    return { ...document, type: "unknown", code: code || UPLOAD_FAILURE_CODES.UNKNOWN, message };
 }
