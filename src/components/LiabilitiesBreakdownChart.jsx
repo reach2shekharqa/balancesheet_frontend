@@ -1,5 +1,5 @@
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getValidYears, isComponentRow, numericValue } from "../utils/analyticsData";
+import { displayLabel, getValidYears, isPieComponent, numericValue } from "../utils/analyticsData";
 
 function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     if (!analyticsData?.dataset) {
@@ -9,11 +9,20 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     const validYears = getValidYears(analyticsData);
     const latestYear = selectedYear ?? validYears[0];
 
-    console.log("[Liabilities Breakdown] dataset:", analyticsData?.dataset);
+    const dataset = analyticsData.dataset;
+
+    console.log("[LIABILITIES PIE] dataset", dataset);
     console.log("[Liabilities Breakdown] selected year:", latestYear);
 
-    const chartData = analyticsData.dataset
-        .filter(isComponentRow)
+    const pieRows = dataset.filter(isPieComponent);
+
+    console.log("[LIABILITIES PIE] component rows", pieRows);
+    console.log(
+        "[LIABILITIES PIE] excluded totals",
+        dataset.filter(row => row?.role === "sectionTotal" || row?.role === "statementTotal")
+    );
+
+    const chartData = pieRows
         .map(row => ({
             name: displayLabel(row.label),
             value: numericValue(row.values?.[latestYear]),

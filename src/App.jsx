@@ -130,7 +130,30 @@ const landingSteps = [
     },
 ];
 
+const landingHeroMedia = [
+    {
+        source: "https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4",
+        label: "Financial analyzer product preview",
+        trimStart: 0.35,
+    },
+    {
+        source: "https://cdn.dribbble.com/userupload/14328298/file/original-c43c723b1303ac42ca5944dfb535c116.mp4",
+        label: "Financial insights product preview",
+        trimStart: 4,
+    },
+];
+
 function LandingPage({ onGetStarted }) {
+    const [activeHeroMedia, setActiveHeroMedia] = useState(0);
+
+    useEffect(() => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+        const rotation = window.setInterval(() => {
+            setActiveHeroMedia(current => (current + 1) % landingHeroMedia.length);
+        }, 7000);
+        return () => window.clearInterval(rotation);
+    }, []);
+
     return (
         <div className="landing-page">
             <header className="landing-header">
@@ -178,24 +201,35 @@ function LandingPage({ onGetStarted }) {
                     </div>
 
                     <div className="landing-hero-visual">
-                        <section className="landing-features landing-video-section" id="features" aria-label="Product preview">
-                            <video
-                                className="landing-feature-video"
-                                src="https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4"
-                                autoPlay
-                                muted
-                                loop
-                                playsInline
-                                preload="metadata"
-                                onCanPlay={(event) => event.currentTarget.play().catch(() => {})}
-                                onPause={(event) => event.currentTarget.play().catch(() => {})}
-                                onTimeUpdate={(event) => {
-                                    if (event.currentTarget.currentTime >= 2) {
-                                        event.currentTarget.currentTime = 0;
-                                    }
-                                }}
-                                aria-label="Financial analyzer product preview"
-                            />
+                        <section className="landing-features landing-video-section landing-hero-gallery" id="features" aria-label="Product preview">
+                            <div className="landing-gallery-main">
+                                {landingHeroMedia.map((media, mediaIndex) => (
+                                    <video
+                                        className={`landing-feature-video${mediaIndex === activeHeroMedia ? " is-active" : ""}`}
+                                        key={media.source}
+                                        src={media.source}
+                                        autoPlay
+                                        muted
+                                        loop
+                                        playsInline
+                                        preload="auto"
+                                        onLoadedMetadata={(event) => {
+                                            event.currentTarget.currentTime = media.trimStart;
+                                        }}
+                                        onCanPlay={(event) => {
+                                            event.currentTarget.currentTime = media.trimStart;
+                                            event.currentTarget.play().catch(() => {});
+                                        }}
+                                        onTimeUpdate={(event) => {
+                                            if (event.currentTarget.currentTime >= media.trimStart + 4) {
+                                                event.currentTarget.currentTime = media.trimStart;
+                                            }
+                                        }}
+                                        aria-label={mediaIndex === activeHeroMedia ? media.label : undefined}
+                                        aria-hidden={mediaIndex !== activeHeroMedia}
+                                    />
+                                ))}
+                            </div>
                         </section>
                     </div>
 

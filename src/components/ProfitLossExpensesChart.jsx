@@ -1,8 +1,5 @@
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getValidYears, numericValue } from "../utils/analyticsData";
-
-const EXPENSE_LABEL = /expense|cost|depreciation|amortization|impairment|employee|payroll|administrative|selling|distribution|finance|interest|tax|purchase|stock|inventory|inventories|materials|material/i;
-const TOTAL_LABEL = /total|gross profit|operating profit|profit before|profit after|net income|net profit|ebit|revenue|sales|income/i;
+import { displayLabel, getValidYears, isPieComponent, numericValue } from "../utils/analyticsData";
 
 function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
     const years = getValidYears(analyticsData);
@@ -13,7 +10,7 @@ function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
     }
 
     const expenseRows = analyticsData.dataset
-        .filter(row => row?.role === "expense" || String(row?.section ?? "").toLowerCase().includes("expense") || row?.role === "detail")
+        .filter(isPieComponent)
         .map(row => ({
             name: displayLabel(row.label),
             value: numericValue(row.values?.[displayedYear]),
@@ -21,7 +18,6 @@ function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
         .filter(item => Number.isFinite(item.value));
 
     const chartData = expenseRows
-        .filter(item => EXPENSE_LABEL.test(item.name) && !TOTAL_LABEL.test(item.name))
         .map(item => ({ ...item, value: Math.abs(item.value) }))
         .filter(item => item.value > 0);
 

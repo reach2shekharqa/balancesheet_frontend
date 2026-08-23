@@ -19,9 +19,11 @@ export function numericValue(value) {
     return Number.isFinite(number) ? number : null;
 }
 
-export function isComponentRow(item) {
+export function isPieComponent(item) {
     return item?.role === "detail";
 }
+
+export const isComponentRow = isPieComponent;
 
 export function displayLabel(label) {
     return String(label ?? "")
