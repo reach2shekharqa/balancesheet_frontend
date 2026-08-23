@@ -683,14 +683,12 @@ function App() {
             setDocuments([]);
             setActiveDocumentId(null);
             setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
-            if (!activeCompany?.companyId) {
-                setDocumentsLoading(false);
-                return;
-            }
-
             let cancelled = false;
             setDocumentsLoading(true);
-            requestJson(`/documents?companyId=${encodeURIComponent(activeCompany.companyId)}`)
+            const documentsPath = activeCompany?.companyId
+                ? `/documents?companyId=${encodeURIComponent(activeCompany.companyId)}`
+                : "/documents";
+            requestJson(documentsPath)
                 .then(result => {
                     if (cancelled) return;
 
@@ -700,7 +698,7 @@ function App() {
                     const latestDocument = nextDocuments[0];
                     if (latestDocument) {
                         setActiveDocumentId(latestDocument.id);
-                        loadAnalytics(latestDocument.id, activeCompany.companyId).catch(error => {
+                        loadAnalytics(latestDocument.id, activeCompany?.companyId).catch(error => {
                             if (!cancelled) {
                                 setMessage(error.message);
                             }
@@ -1053,7 +1051,9 @@ function App() {
 
         try {
             const formData = new FormData();
-            formData.append("companyId", String(activeCompany?.companyId || ""));
+            if (activeCompany?.companyId) {
+                formData.append("companyId", String(activeCompany.companyId));
+            }
             filesToUpload.forEach(({ file }) => formData.append("files[]", file));
 
             const uploadResponse = await fetch(`${API_BASE_URL}/documents/upload-batch`, {
@@ -1096,8 +1096,11 @@ function App() {
             setMessage("Processing document...");
 
             setActiveDocumentId(nextDocumentId);
-            await loadAnalytics(nextDocumentId, activeCompany.companyId);
-            const documentsResult = await requestJson(`/documents?companyId=${encodeURIComponent(activeCompany.companyId)}`);
+            await loadAnalytics(nextDocumentId, activeCompany?.companyId);
+            const documentsPath = activeCompany?.companyId
+                ? `/documents?companyId=${encodeURIComponent(activeCompany.companyId)}`
+                : "/documents";
+            const documentsResult = await requestJson(documentsPath);
             setDocuments(documentsResult.documents ?? []);
             await loadQuota();
             setMessage("Balance sheet analytics loaded successfully.");
@@ -1236,7 +1239,7 @@ function App() {
                         </div>
                         {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">{uploadStatuses.some(status => status.status === "failed") ? "Upload results" : "Analyzing reports"}</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
                         {(identityState.status !== "idle" && !(identityState.status === "verified" && selectedFiles.length === 1)) && <div className={`identity-status identity-status-${identityState.status}`} aria-live="polite">{identityState.status === "verified" && selectedFiles.length > 1 ? <><strong>Reports verified</strong><span>Same company · CIN matched</span></> : identityState.status === "conflict" ? <><strong>Reports don't belong to the same company</strong><span>{identityState.error}</span></> : identityState.status === "incomplete" || identityState.status === "error" ? <><strong>Company identity could not be verified</strong><span>{identityState.error}</span></> : identityState.status === "checking" ? <span>Checking report identity...</span> : null}</div>}
-                                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canUploadActiveCompany || !canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany))}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && !uploadStatuses.some(status => status.status === "failed") && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany)) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
+                                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canUploadActiveCompany || !canAnalyzeFiles(selectedFiles, uploading, identityState)}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && !uploadStatuses.some(status => status.status === "failed") && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
                         <StatusMessage
                             message={message}
                             loading={uploading || analyticsBusy || documentsLoading}
