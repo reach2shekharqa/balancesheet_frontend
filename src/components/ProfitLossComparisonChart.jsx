@@ -1,5 +1,5 @@
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getValidYears, isExpensePieComponent, numericValue } from "../utils/analyticsData";
+import { displayLabel, getExpenseBreakdownRows, getValidYears, numericValue } from "../utils/analyticsData";
 
 function ProfitLossComparisonChart({ analyticsData }) {
     const years = getValidYears(analyticsData);
@@ -10,8 +10,7 @@ function ProfitLossComparisonChart({ analyticsData }) {
         return <div className="chart-empty"><strong>Expense comparison unavailable</strong><p>The selected report does not include two comparable periods.</p></div>;
     }
 
-    const comparisonData = analyticsData.dataset
-        .filter(isExpensePieComponent)
+    const comparisonData = getExpenseBreakdownRows(analyticsData.dataset)
         .map(row => ({
             name: displayLabel(row.label),
             latestValue: numericValue(row.values?.[latestYear]),

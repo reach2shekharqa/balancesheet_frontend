@@ -23,13 +23,18 @@ export function isPieComponent(item) {
     return item?.role === "detail";
 }
 
-function isExpenseSection(label) {
-    const words = String(label ?? "")
+function normalizeMetadata(value) {
+    return String(value ?? "")
         .toLowerCase()
+        .replace(/0/g, "o")
+        .replace(/1/g, "l")
         .replace(/[^a-z]+/g, " ")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function isExpenseSection(label) {
+    const words = normalizeMetadata(label).split(" ").filter(Boolean);
 
     return words.some(word => {
         if (word === "expense" || word === "expenses") {
@@ -52,12 +57,36 @@ function isExpenseSection(label) {
 }
 
 export function isExpensePieComponent(item) {
-    const sectionLabel = [item?.sourceSection, item?.section]
-        .filter(Boolean)
-        .join(" ");
+    if (!isPieComponent(item)) {
+        return false;
+    }
 
-    return isPieComponent(item) && isExpenseSection(sectionLabel);
+    const rowLabel = normalizeMetadata(item?.label ?? item?.name);
+    const metadata = [
+        item?.sourceSection,
+        item?.section,
+        item?.statement,
+        item?.sourceTableStatement
+    ].map(normalizeMetadata);
+    const sectionMetadata = metadata.slice(0, 2).filter(Boolean);
+    const statementMetadata = metadata.slice(2).filter(Boolean);
+
+    if (
+        /\b(?:revenue|income|profit|loss|ebitda|ebit|pbt|pat)\b/.test(rowLabel) ||
+        /\b(?:total|subtotal|aggregate)\b/.test(rowLabel) ||
+        /\b(?:revenue|income|ebitda|ebit|pbt|pat)\b/.test(statementMetadata.join(" "))
+    ) {
+        return false;
+    }
+
+    return sectionMetadata.some(isExpenseSection) ||
+        (sectionMetadata.length === 0 && statementMetadata.some(isExpenseSection));
 }
+
+export function getExpenseBreakdownRows(dataset) {
+    return (dataset ?? []).filter(isExpensePieComponent);
+}
+
 
 export const isComponentRow = isPieComponent;
 

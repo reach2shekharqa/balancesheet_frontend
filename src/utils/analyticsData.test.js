@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { isPieComponent } from "./analyticsData.js";
+import fs from "node:fs";
+import { extractFinancialAnalytics } from "../../../backend/src/services/financialAnalyticsService.js";
+import { getExpenseBreakdownRows, isPieComponent, isExpensePieComponent } from "./analyticsData.js";
 
 test("component rows include detail rows only", () => {
     const dataset = [
@@ -85,5 +87,45 @@ test("document 9 maps eight detail rows and preserves three totals", () => {
     assert.deepEqual(
         dataset.filter(row => row.role === "sectionTotal" || row.role === "statementTotal").map(row => row.values[2024]),
         [1409661.8, 3059577.41, 5398815.85]
+    );
+});
+
+test("expense resolver accepts either normalized section field", () => {
+    assert.equal(isExpensePieComponent({ sourceSection: "2.Expenses:", role: "detail" }), true);
+    assert.equal(isExpensePieComponent({ section: "2.Expenses:", role: "detail" }), true);
+    assert.equal(isExpensePieComponent({ sourceSection: "", section: "Expenses", role: "detail" }), true);
+    assert.equal(isExpensePieComponent({ sourceSection: "2.Expeases:", role: "detail" }), true);
+});
+
+test("expense resolver excludes income, totals, and profit rows", () => {
+    const dataset = [
+        { label: "Revenue", section: "Income", role: "detail" },
+        { label: "Total expenses", section: "Expenses", role: "total" },
+        { label: "Profit before tax", section: "Expenses", role: "detail" },
+        { label: "Operating cost", section: "Expenses", role: "detail" }
+    ];
+
+    assert.deepEqual(getExpenseBreakdownRows(dataset).map(row => row.label), ["Operating cost"]);
+});
+
+test("real extracted report preserves all seven expense detail rows", async () => {
+    const markdown = fs.readFileSync(
+        "../backend/parsed_llmindexmd/b16e3b5bfc51754dfeeff6f42754e8445793e1f3efcac9b9a0d8a3d85020d115.md",
+        "utf8"
+    );
+    const analytics = await extractFinancialAnalytics({ markdown, analyticsType: "profitLoss" });
+
+    assert.equal(getExpenseBreakdownRows(analytics.dataset).length, 7);
+    assert.deepEqual(
+        getExpenseBreakdownRows(analytics.dataset).map(row => row.label),
+        [
+            "(a) Cost of Materials Consumed",
+            "(b) Purchase of Stock in Trade",
+            "(c) Changes in Inventories of Finished goods and Work-in-progress",
+            "(d) Employee Benefits Expenses",
+            "(e) Finance Costs",
+            "(f) Depreciation and Amortisation Expense",
+            "(g) Other Expenses"
+        ]
     );
 });
