@@ -1,5 +1,5 @@
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getValidYears, numericValue } from "../utils/analyticsData";
+import { displayLabel, getValidYears, isComponentRow, numericValue } from "../utils/analyticsData";
 
 function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     if (!analyticsData?.dataset) {
@@ -13,7 +13,7 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     console.log("[Liabilities Breakdown] selected year:", latestYear);
 
     const chartData = analyticsData.dataset
-        .filter(row => row?.role === "detail")
+        .filter(isComponentRow)
         .map(row => ({
             name: displayLabel(row.label),
             value: numericValue(row.values?.[latestYear]),

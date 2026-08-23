@@ -19,6 +19,10 @@ export function numericValue(value) {
     return Number.isFinite(number) ? number : null;
 }
 
+export function isComponentRow(item) {
+    return item?.role === "detail";
+}
+
 export function displayLabel(label) {
     return String(label ?? "")
         .replace(/^\*+|\*+$/g, "")
