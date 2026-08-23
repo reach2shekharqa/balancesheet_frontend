@@ -16,8 +16,12 @@ export function removeFileByIdentity(entries, identity) {
     return entries.filter(({ file }) => getFileIdentity(file) !== identity);
 }
 
-export function canAnalyzeFiles(selectedFiles, uploading, identityState = { status: "idle" }) {
-    return selectedFiles.length > 0 && !uploading && identityState.status === "verified";
+export function canAnalyzeFiles(selectedFiles, uploading, identityState = { status: "idle" }, requireIdentity = true) {
+    return selectedFiles.length > 0 && !uploading && (!requireIdentity || identityState.status === "verified");
+}
+
+export function canUploadForCompany(company) {
+    return !company || company.accessRole === "OWNER";
 }
 
 export function getIdentityValidationState(selectedFiles, cachedIdentities = []) {

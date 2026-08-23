@@ -1,10 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canAnalyzeFiles, getBatchResultState, getFileIdentity, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./uploadBatchState.js";
+import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getFileIdentity, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./uploadBatchState.js";
 
 function pdf(name, lastModified = 1) {
     return { name, size: 10, lastModified };
 }
+
+test("company upload capability follows the active access role", () => {
+    assert.equal(canUploadForCompany({ companyId: 7, accessRole: "OWNER" }), true);
+    assert.equal(canUploadForCompany({ companyId: 8, accessRole: "CONSUMER" }), false);
+    assert.equal(canUploadForCompany(null), true);
+    assert.equal(canAnalyzeFiles([{ file: pdf("independent.pdf") }], false, { status: "idle" }, false), true);
+});
 
 test("duplicate selection keeps one copy of each file", () => {
     const selected = mergeUniqueFiles([], [pdf("A.pdf"), pdf("A.pdf"), pdf("B.pdf")]);

@@ -13,7 +13,7 @@ import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
 import KeyMetrics1A from "./components/keyMetrics/KeyMetrics1A";
 import { selectHistoricalData } from "./components/keyMetrics/keyMetrics1AData";
 import AdminDashboard from "./components/admin/AdminDashboard";
-import { canAnalyzeFiles, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
+import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
 import { extractIdentityFromPdf } from "./utils/pdfIdentityPreflight";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
 
@@ -21,6 +21,23 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
 const welcomeImageSeed = Math.floor(Math.random() * 100000);
+const initialAuthForm = { userName: "", email: "", password: "", registrationIntent: "owner", companyName: "", cin: "", pan: "" };
+const ACTIVE_COMPANY_STORAGE_KEY = "financial-active-company";
+
+function getUserCompanies(user) {
+    return Array.isArray(user?.companies) ? user.companies : user?.company ? [user.company] : [];
+}
+
+function toActiveCompany(company) {
+    if (!company) return null;
+    return {
+        companyId: company.companyId,
+        companyName: company.companyName,
+        cin: company.cin,
+        pan: company.pan,
+        accessRole: company.accessRole,
+    };
+}
 
 async function requestJson(path, options = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -255,6 +272,35 @@ function NavIcon({ children }) {
     return <span className="nav-icon" aria-hidden="true">{children}</span>;
 }
 
+function CompanyAccessSection({ companies, activeCompanyId, expanded, onToggle, expandedCompanies, onSelectCompany, onToggleCompany }) {
+    return <div className="sidebar-companies">
+        <button className={`nav-item nav-button companies-toggle ${expanded ? "is-open" : ""}`} onClick={onToggle} aria-expanded={expanded} aria-controls="sidebar-companies-list">
+            <NavIcon>+</NavIcon>
+            Companies
+            <span className="nav-chevron" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
+        </button>
+        {expanded && <div className="sidebar-companies-list" id="sidebar-companies-list">
+            {companies.length === 0 ? <p className="companies-empty">No company assigned</p> : companies.map(company => {
+                const companyDetailsId = `sidebar-company-${company.companyId}`;
+                const companyExpanded = expandedCompanies[company.companyId] === true;
+                const isSelected = String(activeCompanyId) === String(company.companyId);
+                return <div className="sidebar-company" key={company.companyId}>
+                    <button type="button" className={`sidebar-company-toggle ${companyExpanded ? "is-open" : ""} ${isSelected ? "is-selected" : ""}`} onClick={() => { onSelectCompany(company.companyId); onToggleCompany(company.companyId); }} aria-expanded={companyExpanded} aria-controls={companyDetailsId} aria-pressed={isSelected}>
+                        <span className="company-selection-indicator" aria-hidden="true">{isSelected ? "●" : "○"}</span>
+                        <span className="sidebar-company-copy"><strong>{company.companyName}</strong><small>Access role: {company.accessRole}</small><small>CIN: {company.cin || "Not available"}</small></span>
+                        <span className="nav-chevron" aria-hidden="true">{companyExpanded ? "⌃" : "⌄"}</span>
+                    </button>
+                    {companyExpanded && <div className="sidebar-company-details" id={companyDetailsId}>
+                        <span>CIN: <strong>{company.cin || "Not available"}</strong></span>
+                        <span>PAN: <strong>{company.pan || "Not available"}</strong></span>
+                        <span>Access role: <strong>{company.accessRole}</strong></span>
+                    </div>}
+                </div>;
+            })}
+        </div>}
+    </div>;
+}
+
 function SectionHeader({ eyebrow, title, description, action }) {
     return (
         <div className="section-header">
@@ -296,7 +342,32 @@ const appDocs = [
     { title: "Account and privacy", text: "Use the account controls to sign out. Review the Privacy and Security information in the footer for guidance about workspace access and uploaded documents." },
 ];
 
-async function requestAnalytics(documentId, analyticsType) {
+function RegistrationFields({ authForm, onChange }) {
+    const isOwner = authForm.registrationIntent === "owner";
+    return <>
+        <fieldset className="auth-registration-intent">
+            <legend>How will you use Financial Analyzer?</legend>
+            <label><input type="radio" name="registrationIntent" value="owner" checked={isOwner} onChange={onChange} />I own/manage a company</label>
+            <label><input type="radio" name="registrationIntent" value="consumer" checked={!isOwner} onChange={onChange} />I only want to view/analyze companies shared with me</label>
+        </fieldset>
+        {isOwner && <div className="auth-company-fields">
+            <div className="auth-form-section">Company information</div>
+            <label>Company Name *<input name="companyName" type="text" value={authForm.companyName} onChange={onChange} required autoComplete="organization" /></label>
+            <div className="auth-field-row"><label>CIN *<input name="cin" type="text" value={authForm.cin} onChange={onChange} required maxLength="30" /></label><label>PAN (optional)<input name="pan" type="text" value={authForm.pan} onChange={onChange} maxLength="20" /></label></div>
+        </div>}
+    </>;
+}
+
+function GoogleLogo() {
+    return <svg aria-hidden="true" className="google-logo" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M21.35 12.1c0-.71-.06-1.4-.18-2.05H12v3.9h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.24Z" />
+        <path fill="#34A853" d="M12 21.99c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.29v2.53A9.75 9.75 0 0 0 12 21.99Z" />
+        <path fill="#FBBC05" d="M6.53 14.07a5.86 5.86 0 0 1 0-3.74V7.8H3.29a9.75 9.75 0 0 0 0 8.8l3.24-2.53Z" />
+        <path fill="#EA4335" d="M12 6.3c1.43 0 2.72.49 3.73 1.46l2.8-2.8C16.84 3.4 14.63 2.5 12 2.5a9.75 9.75 0 0 0-8.71 5.3l3.24 2.53C7.3 8.02 9.46 6.3 12 6.3Z" />
+    </svg>;
+}
+
+async function requestAnalytics(documentId, analyticsType, companyId) {
     console.log(`[ANALYTICS] Starting ${analyticsType} request`, {
         documentId,
         analyticsType,
@@ -306,7 +377,7 @@ async function requestAnalytics(documentId, analyticsType) {
         `/documents/${documentId}/analytics`,
         {
             method: "POST",
-            body: JSON.stringify({ analyticsType }),
+            body: JSON.stringify({ analyticsType, companyId }),
         }
     );
 
@@ -320,13 +391,15 @@ async function requestAnalytics(documentId, analyticsType) {
 
 function App() {
     const [user, setUser] = useState(null);
+    const [activeCompany, setActiveCompany] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [authError, setAuthError] = useState("");
     const [authMode, setAuthMode] = useState("login");
-    const [authForm, setAuthForm] = useState({ userName: "", email: "", password: "" });
+    const [authForm, setAuthForm] = useState(initialAuthForm);
     const [authMessage, setAuthMessage] = useState("");
     const [authSubmitting, setAuthSubmitting] = useState(false);
     const [landingView, setLandingView] = useState("landing");
+    const [authDialogOpen, setAuthDialogOpen] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [identityState, setIdentityState] = useState({ status: "idle", identities: [], error: "" });
     const [uploadStatuses, setUploadStatuses] = useState([]);
@@ -365,6 +438,8 @@ function App() {
     });
     const [reportMenuOpen, setReportMenuOpen] = useState(false);
     const [reportHistoryOpen, setReportHistoryOpen] = useState(false);
+    const [companiesOpen, setCompaniesOpen] = useState(false);
+    const [expandedCompanies, setExpandedCompanies] = useState({});
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(() => new Date());
     const currentDayPart = getDayPart(currentTime.getHours());
@@ -469,12 +544,38 @@ function App() {
     }, []);
 
     useEffect(() => {
+        if (!user) {
+            setActiveCompany(null);
+            return;
+        }
+
+        const companies = getUserCompanies(user);
+        let persistedCompanyId = null;
+        try {
+            persistedCompanyId = window.sessionStorage.getItem(ACTIVE_COMPANY_STORAGE_KEY);
+        } catch {
+            persistedCompanyId = null;
+        }
+        const selectedCompany = companies.find(company => String(company.companyId) === String(persistedCompanyId)) || companies[0] || null;
+        setActiveCompany(toActiveCompany(selectedCompany));
+    }, [user]);
+
+    useEffect(() => {
+        if (!user || !activeCompany) return;
+        try {
+            window.sessionStorage.setItem(ACTIVE_COMPANY_STORAGE_KEY, String(activeCompany.companyId));
+        } catch {
+            return;
+        }
+    }, [activeCompany, user]);
+
+    useEffect(() => {
         if (!authLoading && window.location.pathname.startsWith("/admin") && (!user || user.role !== "admin")) {
             window.location.replace("/");
         }
     }, [authLoading, user]);
 
-        async function loadAnalytics(documentId) {
+        async function loadAnalytics(documentId, companyId = activeCompany?.companyId) {
             const requestId = analyticsRequestRef.current + 1;
             analyticsRequestRef.current = requestId;
             setAnalyticsLoading({ assets: true, liabilities: true, profitLoss: true });
@@ -482,9 +583,9 @@ function App() {
 
             try {
                 const [assets, liabilities, profitLoss] = await Promise.all([
-                    requestAnalytics(documentId, "assetsBreakdown"),
-                    requestAnalytics(documentId, "liabilitiesBreakdown"),
-                    requestAnalytics(documentId, "profitLoss"),
+                    requestAnalytics(documentId, "assetsBreakdown", companyId),
+                    requestAnalytics(documentId, "liabilitiesBreakdown", companyId),
+                    requestAnalytics(documentId, "profitLoss", companyId),
                 ]);
 
                 if (requestId === analyticsRequestRef.current) {
@@ -502,8 +603,18 @@ function App() {
                 return;
             }
 
+            analyticsRequestRef.current += 1;
+            setDocuments([]);
+            setActiveDocumentId(null);
+            setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+            if (!activeCompany?.companyId) {
+                setDocumentsLoading(false);
+                return;
+            }
+
             let cancelled = false;
-            requestJson("/documents")
+            setDocumentsLoading(true);
+            requestJson(`/documents?companyId=${encodeURIComponent(activeCompany.companyId)}`)
                 .then(result => {
                     if (cancelled) return;
 
@@ -513,7 +624,7 @@ function App() {
                     const latestDocument = nextDocuments[0];
                     if (latestDocument) {
                         setActiveDocumentId(latestDocument.id);
-                        loadAnalytics(latestDocument.id).catch(error => {
+                        loadAnalytics(latestDocument.id, activeCompany.companyId).catch(error => {
                             if (!cancelled) {
                                 setMessage(error.message);
                             }
@@ -533,10 +644,15 @@ function App() {
             return () => {
                 cancelled = true;
             };
-        }, [user]);
+        }, [user, activeCompany?.companyId]);
 
     function updateAuthField(event) {
-        setAuthForm(current => ({ ...current, [event.target.name]: event.target.value }));
+        setAuthForm(current => {
+            if (event.target.name === "registrationIntent") {
+                return { ...current, registrationIntent: event.target.value, ...(event.target.value === "consumer" ? { companyName: "", cin: "", pan: "" } : {}) };
+            }
+            return { ...current, [event.target.name]: event.target.value };
+        });
     }
 
     async function handleAuthSubmit(event) {
@@ -555,7 +671,8 @@ function App() {
             });
             setDocumentsLoading(true);
             setUser(result.user);
-            setAuthForm({ userName: "", email: "", password: "" });
+            setAuthDialogOpen(false);
+            setAuthForm(initialAuthForm);
         } catch (error) {
             setAuthMessage(error.message);
         } finally {
@@ -564,23 +681,36 @@ function App() {
     }
 
     const openAuthFlow = useCallback((mode = "login") => {
-        setLandingView("auth");
+        setLandingView("landing");
         setAuthMode(mode);
         setAuthMessage("");
+        setAuthDialogOpen(true);
     }, []);
+
+    useEffect(() => {
+        if (!authDialogOpen) return undefined;
+
+        const handleEscape = event => {
+            if (event.key === "Escape" && !authSubmitting) setAuthDialogOpen(false);
+        };
+        window.addEventListener("keydown", handleEscape);
+        return () => window.removeEventListener("keydown", handleEscape);
+    }, [authDialogOpen, authSubmitting]);
 
     async function handleLogout() {
         await requestJson("/auth/logout", { method: "POST" });
         setUser(null);
         setLandingView("landing");
+        setAuthDialogOpen(false);
         setAuthMode("login");
-        setAuthForm({ userName: "", email: "", password: "" });
+        setAuthForm(initialAuthForm);
         setAuthMessage("");
         setSelectedFiles([]);
         setUploadStatuses([]);
         setDocuments([]);
         setActiveDocumentId(null);
         setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
+        setActiveCompany(null);
     }
 
     const handleGoogleLogin = useCallback(async credential => {
@@ -598,7 +728,8 @@ function App() {
             });
             setDocumentsLoading(true);
             setUser(result.user);
-            setAuthForm({ userName: "", email: "", password: "" });
+            setAuthDialogOpen(false);
+            setAuthForm(initialAuthForm);
         } catch (error) {
             setAuthMessage(error.message);
         } finally {
@@ -652,7 +783,7 @@ function App() {
         }, 100);
 
         return () => window.clearInterval(renderInterval);
-    }, [authLoading, authMode, handleGoogleLogin, landingView, user]);
+    }, [authDialogOpen, authForm.registrationIntent, authLoading, authMode, handleGoogleLogin, landingView, user]);
 
     if (authLoading) {
         return <div className="app auth-loading"><div className="loading-card"><div className="brand-mark">₹</div><LoadingIndicator label="Loading your workspace..." /></div></div>;
@@ -665,9 +796,41 @@ function App() {
     if (!user) {
         if (landingView === "landing") {
             return (
-                <LandingPage
-                    onGetStarted={() => openAuthFlow("register")}
-                />
+                <>
+                    <LandingPage onGetStarted={() => openAuthFlow("register")} />
+                    {authDialogOpen && (
+                        <div className="auth-dialog-layer">
+                            <button className="auth-dialog-backdrop" type="button" aria-label="Close registration dialog" onClick={() => !authSubmitting && setAuthDialogOpen(false)} />
+                            <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+                                <div className="auth-dialog-aside">
+                                    <span className="auth-dialog-kicker">Financial Analyzer</span>
+                                    <div>
+                                        <span className="auth-dialog-icon">₹</span>
+                                        <h2>Make your numbers work harder.</h2>
+                                        <p>Join a calmer way to understand reports, trends, and the decisions behind them.</p>
+                                    </div>
+                                    <div className="auth-dialog-proof"><span className="signal-dot" /> Secure workspace for your financial reports</div>
+                                </div>
+                                <div className="auth-dialog-content">
+                                    <button className="auth-close" type="button" aria-label="Close registration dialog" disabled={authSubmitting} onClick={() => setAuthDialogOpen(false)}>×</button>
+                                    <span className="eyebrow">{authMode === "login" ? "Welcome back" : "Start with clarity"}</span>
+                                    <h2 id="auth-dialog-title">{authMode === "login" ? "Sign in to your workspace" : "Create your account"}</h2>
+                                    <p className="auth-dialog-intro">{authMode === "login" ? "Access your financial analysis dashboard." : "Set up your workspace in less than a minute."}</p>
+                                    <form onSubmit={handleAuthSubmit} className="auth-form">
+                                        {authMode === "register" && <label>Name<input name="userName" type="text" value={authForm.userName} onChange={updateAuthField} required autoComplete="name" /></label>}
+                                        <label>{authMode === "login" ? "Email or username" : "Email"}<input name="email" type={authMode === "login" ? "text" : "email"} value={authForm.email} onChange={updateAuthField} required autoComplete={authMode === "login" ? "username" : "email"} /></label>
+                                            <label>Password<input name="password" type="password" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} /></label>
+                                        {authMode === "register" && <RegistrationFields authForm={authForm} onChange={updateAuthField} />}
+                                        <button className="primary-button" type="submit" disabled={authSubmitting}>{authSubmitting ? <LoadingIndicator label={authMode === "login" ? "Logging in..." : "Creating account..."} /> : authMode === "login" ? "Login" : "Create account"}</button>
+                                    </form>
+                                    {GOOGLE_CLIENT_ID && authForm.registrationIntent === "consumer" && <><div className="auth-divider"><span>or continue with</span></div><div className="google-auth-tools"><div className="google-login-button" ref={googleButtonRef} /><button type="button" className="google-fallback-button" onClick={handleGoogleFallback}><GoogleLogo />{authMode === "login" ? "Sign in with Google" : "Sign up with Google"}</button></div></>}
+                                    {authMessage && <div className="status-banner error">{authMessage}</div>}
+                                    <button type="button" className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>{authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}</button>
+                                </div>
+                            </section>
+                        </div>
+                    )}
+                </>
             );
         }
 
@@ -682,7 +845,7 @@ function App() {
                     <div className="auth-panel-content">
                         <div className="auth-card">
                         <span className="eyebrow">{authMode === "login" ? "Welcome back" : "Join Financial Analyzer"}</span>
-                        <h2>{authMode === "login" ? "Sign in to your workspace" : "Create your workspace"}</h2>
+                        <h2>{authMode === "login" ? "Sign in to your workspace" : "Create your account"}</h2>
                         <p>{authMode === "login" ? "Access your financial analysis dashboard." : "Start turning reports into useful insight."}</p>
                     <form onSubmit={handleAuthSubmit} className="auth-form">
                         {authMode === "register" && (
@@ -699,18 +862,19 @@ function App() {
                             Password
                             <input name="password" type="password" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} />
                         </label>
+                        {authMode === "register" && <RegistrationFields authForm={authForm} onChange={updateAuthField} />}
                         <button className="primary-button" type="submit" disabled={authSubmitting}>
                             {authSubmitting ? (
                                 <LoadingIndicator label={authMode === "login" ? "Logging in..." : "Creating account..."} />
                             ) : authMode === "login" ? "Login" : "Create account"}
                         </button>
                     </form>
-                    {GOOGLE_CLIENT_ID && <>
+                    {GOOGLE_CLIENT_ID && authForm.registrationIntent === "consumer" && <>
                         <div className="auth-divider"><span>or continue with</span></div>
                         <div className="google-auth-tools">
                             <div className="google-login-button" ref={googleButtonRef} />
                             <button type="button" className="google-fallback-button" onClick={handleGoogleFallback}>
-                                <span aria-hidden="true">G</span>
+                                <GoogleLogo />
                                 {authMode === "login" ? "Sign in with Google" : "Sign up with Google"}
                             </button>
                         </div>
@@ -781,6 +945,11 @@ function App() {
     }
 
     async function handleUpload() {
+        if (!canUploadForCompany(activeCompany)) {
+            setMessage("You do not have permission to upload documents for this company.");
+            return;
+        }
+
         if (selectedFiles.length === 0) {
             setMessage("Please select at least one PDF first.");
             return;
@@ -803,6 +972,7 @@ function App() {
 
         try {
             const formData = new FormData();
+            formData.append("companyId", String(activeCompany?.companyId || ""));
             filesToUpload.forEach(({ file }) => formData.append("files[]", file));
 
             const uploadResponse = await fetch(`${API_BASE_URL}/documents/upload-batch`, {
@@ -839,8 +1009,8 @@ function App() {
             setMessage("Processing document...");
 
             setActiveDocumentId(nextDocumentId);
-            await loadAnalytics(nextDocumentId);
-            const documentsResult = await requestJson("/documents");
+            await loadAnalytics(nextDocumentId, activeCompany.companyId);
+            const documentsResult = await requestJson(`/documents?companyId=${encodeURIComponent(activeCompany.companyId)}`);
             setDocuments(documentsResult.documents ?? []);
             await loadQuota();
             setMessage("Balance sheet analytics loaded successfully.");
@@ -859,7 +1029,7 @@ function App() {
                 setQuotaModalOpen(true);
                 setMessage("");
             } else {
-                setMessage("Unable to load balance sheet analytics. Please try again.");
+                setMessage(error.message || "Unable to load balance sheet analytics. Please try again.");
             }
         } finally {
             setUploading(false);
@@ -894,6 +1064,18 @@ function App() {
         }
     }
 
+    function handleCompanySelect(companyId) {
+        const company = companies.find(item => String(item.companyId) === String(companyId));
+        if (!company || String(activeCompany?.companyId) === String(company.companyId)) return;
+        setActiveCompany(toActiveCompany(company));
+        setSelectedFiles([]);
+        setIdentityState({ status: "idle", identities: [], error: "" });
+        setUploadStatuses([]);
+        setUploading(false);
+        setReportMenuOpen(false);
+        setMessage("");
+    }
+
     function handleDrop(event) {
         event.preventDefault();
         if (!uploading) {
@@ -902,6 +1084,7 @@ function App() {
     }
 
     const analyticsReady = analyticsData.assets && analyticsData.liabilities;
+    const canUploadActiveCompany = canUploadForCompany(activeCompany);
     const analyticsBusy = analyticsLoading.assets || analyticsLoading.liabilities;
     const keyMetrics = analyticsData.profitLoss?.keyMetrics;
     const historicalData = selectHistoricalData(analyticsData.profitLoss);
@@ -912,6 +1095,7 @@ function App() {
     const welcomeImageSources = getWelcomeImageSources(dayPart);
     const welcomeImageUrl = welcomeImageSources[welcomeImageIndex];
     const firstName = String(user.userName || "there").trim().split(/\s+/)[0];
+    const companies = getUserCompanies(user);
     const dayPartCopy = {
         morning: "Start the day with a clear view of your numbers.",
         afternoon: "Keep your financial decisions moving with confidence.",
@@ -932,13 +1116,14 @@ function App() {
                     <a className={`nav-item ${activeSection === "#analytics" ? "is-active" : ""}`} href="#analytics" aria-current={activeSection === "#analytics" ? "page" : undefined}><NavIcon>~</NavIcon>Analytics</a>
                     <button id="documents" className={`nav-item nav-button report-history-toggle ${reportHistoryOpen ? "is-open" : ""}`} onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen} aria-controls="sidebar-report-history"><NavIcon>{reportHistoryOpen ? "-" : "+"}</NavIcon>Report history<span className="nav-chevron" aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>
                     {reportHistoryOpen && <div className="sidebar-report-history" id="sidebar-report-history"><div className="history-heading"><div><span className="eyebrow">Report history</span><h3>Reports</h3></div><span className="history-count">{documents.length}</span></div>{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p><a href="#upload">Upload PDF</a></div> : <><button className={`report-selector ${reportMenuOpen ? "is-open" : ""}`} onClick={() => setReportMenuOpen(open => !open)} aria-expanded={reportMenuOpen} disabled={documentsLoading}><span>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Select report"}</span><span aria-hidden="true">⌄</span></button>{reportMenuOpen && <div className="report-menu"><span className="report-menu-label">Select report</span>{documents.map((document, index) => <button className={`report-option ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { setReportMenuOpen(false); handleDocumentSelect(document.id); }}><span>{document.id === activeDocumentId ? "✓" : ""}</span><span className="report-option-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}{document.extraction_status ? ` · ${document.extraction_status}` : ""}</small></span>{index === 0 && <em>Latest</em>}</button>)}</div>}<div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => handleDocumentSelect(document.id)}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div></>}</div>}
+                                    <CompanyAccessSection companies={companies} activeCompanyId={activeCompany?.companyId} expanded={companiesOpen} onToggle={() => setCompaniesOpen(open => !open)} expandedCompanies={expandedCompanies} onSelectCompany={handleCompanySelect} onToggleCompany={companyId => setExpandedCompanies(current => ({ ...current, [companyId]: !current[companyId] }))} />
                 </nav>
                 <div className="sidebar-footer"><div className="sidebar-label">Account</div><button className="nav-item nav-button" onClick={handleLogout}><NavIcon>&gt;</NavIcon>Log out</button></div>
             </aside>
             <main className="workspace-main">
                 <header className="topbar">
                     <button className={`mobile-menu ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(open => !open)} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen}><span className="hamburger-icon" aria-hidden="true"><span /><span /><span /></span></button>
-                    <div><span className="topbar-kicker">Workspace / Overview</span><h1>Dashboard</h1></div>
+                                        <div><span className="topbar-kicker">Workspace / {activeCompany?.companyName || "No company assigned"}</span><h1>Dashboard</h1></div>
                     <div className="topbar-actions">
                         <button className="theme-toggle" onClick={() => setDarkMode(mode => !mode)} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={darkMode}><span className="theme-toggle-icon" aria-hidden="true">{darkMode ? "☀" : "◐"}</span><span>{darkMode ? "Light mode" : "Dark mode"}</span></button>
                         <div className="account-controls"><div className="avatar">{String(user.userName || "U").slice(0, 1).toUpperCase()}</div><div className="account-copy"><strong>{user.userName}</strong><span>{user.email}</span></div><button onClick={handleLogout} className="logout-button">Log out</button></div>
@@ -956,16 +1141,16 @@ function App() {
                         <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={documents[0]?.original_filename}>{documents[0]?.original_filename || "--"}</strong><span className="kpi-foot">PDF document</span></div>
                     </section>}
                     <section className="upload-section" id="upload">
-                        <SectionHeader eyebrow="Get started" title="Upload a financial report" description="Drop a PDF here to unlock your balance sheet analytics." />
-                        <div className={`upload-zone ${selectedFiles.length ? "has-file" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
-                            <input id="file-upload" ref={fileInputRef} className="file-input" type="file" accept=".pdf,application/pdf" multiple onChange={handleFileChange} disabled={uploading} />
-                            <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{selectedFiles.length ? "Add more PDF reports" : "Drop your reports here"}</strong><span>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "report" : "reports"} selected` : "or browse from your device"}</span><small>PDF files up to 25 MB each</small></label>
+                        <SectionHeader eyebrow={canUploadActiveCompany ? "Get started" : "Read only"} title={canUploadActiveCompany ? "Upload a financial report" : "Company documents are read-only"} description={canUploadActiveCompany ? "Drop a PDF here to unlock your balance sheet analytics." : "You can view this company's documents and analytics, but only an OWNER can upload reports."} />
+                        <div className={`upload-zone ${selectedFiles.length ? "has-file" : ""} ${!canUploadActiveCompany ? "is-read-only" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
+                            <input id="file-upload" ref={fileInputRef} className="file-input" type="file" accept=".pdf,application/pdf" multiple onChange={handleFileChange} disabled={!canUploadActiveCompany || uploading} />
+                            {canUploadActiveCompany ? <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{selectedFiles.length ? "Add more PDF reports" : "Drop your reports here"}</strong><span>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "report" : "reports"} selected` : "or browse from your device"}</span><small>PDF files up to 25 MB each</small></label> : <div className="upload-zone-content"><span className="upload-icon" aria-hidden="true">✓</span><strong>View existing reports</strong><span>Upload is available to OWNER members</span><small>Documents and analytics remain available below</small></div>}
                         </div>
                         {selectedFiles.length > 0 && <div className="selected-files selected-file-preview" aria-label="Selected reports"><div className="selected-files-heading">Selected reports</div><div className="selected-file-grid">{selectedFiles.map(({ file, name, size }) => { const identity = `${file.name}:${file.size}:${file.lastModified}`; return <div className="selected-file selected-file-card" key={identity} title={name}><span className="selected-file-icon" aria-hidden="true">PDF</span><strong title={name}>{name}</strong><small>{formatFileSize(size)}</small><button type="button" onClick={() => removeSelectedFile(identity)} disabled={uploading} aria-label={`Remove ${name}`} title={`Remove ${name}`}><span aria-hidden="true">−</span></button></div>; })}</div></div>}
                         {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">Analyzing reports</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
                         {(identityState.status !== "idle" && !(identityState.status === "verified" && selectedFiles.length === 1)) && <div className={`identity-status identity-status-${identityState.status}`} aria-live="polite">{identityState.status === "verified" && selectedFiles.length > 1 ? <><strong>Reports verified</strong><span>Same company · CIN matched</span></> : identityState.status === "conflict" ? <><strong>Reports don't belong to the same company</strong><span>{identityState.error}</span></> : identityState.status === "incomplete" || identityState.status === "error" ? <><strong>Company identity could not be verified</strong><span>{identityState.error}</span></> : identityState.status === "checking" ? <span>Checking report identity...</span> : null}</div>}
-                                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canAnalyzeFiles(selectedFiles, uploading, identityState)}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
-                        {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
+                                        <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canUploadActiveCompany || !canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany))}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany)) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
+                        {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") || message.includes("permission") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") || message.includes("permission") ? "Analysis could not be completed" : "Report update"}</strong><span>{message}</span></div>}
                     </section>
                     {documents.length > 0 && <section className="insights-section" id="analytics" tabIndex="-1">
                         <div className="insights-heading-row">
