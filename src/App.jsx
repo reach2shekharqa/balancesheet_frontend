@@ -13,6 +13,7 @@ import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
 import KeyMetrics1A from "./components/keyMetrics/KeyMetrics1A";
 import { selectHistoricalData } from "./components/keyMetrics/keyMetrics1AData";
 import AdminDashboard from "./components/admin/AdminDashboard";
+import StatusMessage from "./components/StatusMessage";
 import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
 import { extractIdentityFromPdf } from "./utils/pdfIdentityPreflight";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
@@ -20,7 +21,6 @@ import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
-const welcomeImageSeed = Math.floor(Math.random() * 100000);
 const initialAuthForm = { userName: "", email: "", password: "", registrationIntent: "owner", companyName: "", cin: "", pan: "" };
 const ACTIVE_COMPANY_STORAGE_KEY = "financial-active-company";
 
@@ -75,36 +75,6 @@ function formatFileSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getLocalTimeZoneLabel() {
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-    const city = timeZone.split("/").pop()?.replaceAll("_", " ");
-    return city || "your local time";
-}
-
-function getWelcomeImageUrl(dayPart) {
-    const location = getLocalTimeZoneLabel();
-    const imageSets = {
-        morning: ["1497366754035-f200968a6e72", "1497366811353-6870744d04b2"],
-        afternoon: ["1497366216548-37526070297c", "1497366811353-6870744d04b2"],
-        evening: ["1497366811353-6870744d04b2", "1497366216548-37526070297c"],
-        night: ["1519681393784-d120267933ba", "1519608487953-e999c86e7455"],
-    };
-    const locationValue = [...location].reduce((total, character) => total + character.charCodeAt(0), 0);
-    const images = imageSets[dayPart];
-    const imageId = images[(locationValue + welcomeImageSeed) % images.length];
-    return `https://images.unsplash.com/photo-${imageId}?auto=format&fit=crop&w=1400&q=85&sig=${welcomeImageSeed}`;
-}
-
-function getWelcomeImageSources(dayPart) {
-    const location = getLocalTimeZoneLabel();
-    const query = encodeURIComponent(`${location} ${dayPart} finance office`);
-    return [
-        getWelcomeImageUrl(dayPart),
-        `https://source.unsplash.com/1400x500/?${query}&sig=${welcomeImageSeed}`,
-        `https://loremflickr.com/1400/500/${query}?lock=${welcomeImageSeed}-${dayPart}`,
-    ];
-}
-
 function getDayPart(hour) {
     if (hour >= 5 && hour < 12) return "morning";
     if (hour >= 12 && hour < 17) return "afternoon";
@@ -130,6 +100,12 @@ const landingSteps = [
     },
 ];
 
+const landingPlans = [
+    { name: "Free", audience: "For a first look", price: "$0", cadence: "to get started", features: ["1 PDF upload", "Core financial analytics", "Shared company viewing"], action: "Start free", tone: "quiet" },
+    { name: "$99 Plan", audience: "For owners and managers", price: "$99", cadence: "for 25 PDF uploads", features: ["25 PDF uploads", "Balance sheet analytics", "Profit and loss insights", "Report history"], action: "Choose $99", tone: "featured", badge: "Most popular" },
+    { name: "$250 Plan", audience: "For growing teams", price: "$250", cadence: "for 250 PDF uploads", features: ["250 PDF uploads", "Everything in $99 Plan", "More room for report history", "Priority capacity"], action: "Choose $250", tone: "quiet" },
+];
+
 const landingHeroMedia = [
     {
         source: "https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4",
@@ -141,10 +117,31 @@ const landingHeroMedia = [
         label: "Financial insights product preview",
         trimStart: 4,
     },
+    {
+        type: "image",
+        source: "https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=1200x900&vertical=center",
+        srcSet: "https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=300x225&vertical=center 300w, https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=600x450&vertical=center 600w, https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=1200x900&vertical=center 1200w, https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=2048x1536&vertical=center 2048w",
+        label: "Financial analysis workspace illustration",
+    },
 ];
+const workspaceWelcomeVideo = "https://cdn.dribbble.com/userupload/15158652/file/original-d1a0d5fa39a82f7bbe884e1d1e3bef36.mp4";
 
-function LandingPage({ onGetStarted }) {
+function LandingPage({ onGetStarted, showEntryChooser }) {
     const [activeHeroMedia, setActiveHeroMedia] = useState(0);
+    const [entryChooserOpen, setEntryChooserOpen] = useState(false);
+
+    useEffect(() => {
+        if (showEntryChooser) setEntryChooserOpen(true);
+    }, [showEntryChooser]);
+
+    function openEntryChooser() {
+        setEntryChooserOpen(true);
+    }
+
+    function selectEntryPath(mode, registrationIntent) {
+        setEntryChooserOpen(false);
+        onGetStarted(mode, registrationIntent);
+    }
 
     useEffect(() => {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
@@ -165,9 +162,10 @@ function LandingPage({ onGetStarted }) {
                     <nav className="landing-nav-links" aria-label="Main navigation">
                         <a href="#features">Features</a>
                         <a href="#how-it-works">How It Works</a>
+                        <a href="#pricing">Pricing</a>
                         <a href="#benefits">Benefits</a>
                     </nav>
-                    <button className="primary-button landing-nav-button landing-gold-cta" type="button" onClick={onGetStarted}>
+                    <button className="primary-button landing-nav-button landing-gold-cta" type="button" onClick={openEntryChooser}>
                         Get Started
                     </button>
                 </div>
@@ -183,7 +181,7 @@ function LandingPage({ onGetStarted }) {
                             cash flow, balance sheet health, trends and key financial insights.
                         </p>
                         <div className="landing-hero-actions">
-                            <button className="primary-button landing-gold-cta" type="button" onClick={onGetStarted}>
+                            <button className="primary-button landing-gold-cta" type="button" onClick={openEntryChooser}>
                                 Get Started
                             </button>
                         </div>
@@ -201,36 +199,44 @@ function LandingPage({ onGetStarted }) {
                     </div>
 
                     <div className="landing-hero-visual">
-                        <section className="landing-features landing-video-section landing-hero-gallery" id="features" aria-label="Product preview">
-                            <div className="landing-gallery-main">
-                                {landingHeroMedia.map((media, mediaIndex) => (
-                                    <video
-                                        className={`landing-feature-video${mediaIndex === activeHeroMedia ? " is-active" : ""}`}
-                                        key={media.source}
-                                        src={media.source}
-                                        autoPlay
-                                        muted
-                                        loop
-                                        playsInline
-                                        preload="auto"
-                                        onLoadedMetadata={(event) => {
-                                            event.currentTarget.currentTime = media.trimStart;
-                                        }}
-                                        onCanPlay={(event) => {
-                                            event.currentTarget.currentTime = media.trimStart;
-                                            event.currentTarget.play().catch(() => {});
-                                        }}
-                                        onTimeUpdate={(event) => {
-                                            if (event.currentTarget.currentTime >= media.trimStart + 4) {
+                        <div className="hero-visual-shell">
+                            <div className="hero-visual-topline"><span>Financial Analyzer workspace</span><span className="hero-visual-status"><i /> Live preview</span></div>
+                            <section className="landing-features landing-video-section landing-hero-gallery" id="features" aria-label="Product preview">
+                                <div className="landing-gallery-main">
+                                    {landingHeroMedia.map((media, mediaIndex) => media.type === "image" ? (
+                                        <img className={`landing-feature-image${mediaIndex === activeHeroMedia ? " is-active" : ""}`} key={media.source} src={media.source} srcSet={media.srcSet} sizes="(max-width: 760px) calc(100vw - 32px), 1120px" alt={media.label} aria-hidden={mediaIndex !== activeHeroMedia} />
+                                    ) : (
+                                        <video
+                                            className={`landing-feature-video${mediaIndex === activeHeroMedia ? " is-active" : ""}`}
+                                            key={media.source}
+                                            src={media.source}
+                                            autoPlay
+                                            muted
+                                            loop
+                                            playsInline
+                                            preload="auto"
+                                            onLoadedMetadata={(event) => {
                                                 event.currentTarget.currentTime = media.trimStart;
-                                            }
-                                        }}
-                                        aria-label={mediaIndex === activeHeroMedia ? media.label : undefined}
-                                        aria-hidden={mediaIndex !== activeHeroMedia}
-                                    />
-                                ))}
-                            </div>
-                        </section>
+                                            }}
+                                            onCanPlay={(event) => {
+                                                event.currentTarget.currentTime = media.trimStart;
+                                                event.currentTarget.play().catch(() => {});
+                                            }}
+                                            onTimeUpdate={(event) => {
+                                                if (event.currentTarget.currentTime >= media.trimStart + 4) {
+                                                    event.currentTarget.currentTime = media.trimStart;
+                                                }
+                                            }}
+                                            aria-label={mediaIndex === activeHeroMedia ? media.label : undefined}
+                                            aria-hidden={mediaIndex !== activeHeroMedia}
+                                        />
+                                    ))}
+                                    <div className="hero-visual-overlay hero-visual-kpi"><span>Profit margin</span><strong>18.6%</strong><small>+4.2% this year</small></div>
+                                    <div className="hero-visual-overlay hero-visual-insight"><span><i /> Insight found</span><strong>Revenue is trending upward</strong></div>
+                                </div>
+                            </section>
+                            <div className="hero-visual-caption"><span>See the story behind every figure.</span><span>Balance sheet · Profit &amp; loss · Trends</span></div>
+                        </div>
                     </div>
 
                 </section>
@@ -280,18 +286,48 @@ function LandingPage({ onGetStarted }) {
                     </div>
                 </section>
 
+                <section className="landing-pricing" id="pricing" aria-labelledby="pricing-title">
+                    <div className="landing-section-header pricing-header">
+                        <div>
+                            <span className="eyebrow">Plans that stay simple</span>
+                            <h2 id="pricing-title">Choose the right amount of room for your reports</h2>
+                        </div>
+                        <p>Start small, then upgrade when your analysis needs grow. Every plan keeps the same focused workspace.</p>
+                    </div>
+                    <div className="pricing-grid">
+                        {landingPlans.map(plan => <article className={`pricing-card pricing-card-${plan.tone}`} key={plan.name}>
+                            {plan.badge && <span className="pricing-badge">{plan.badge}</span>}
+                            <div className="pricing-card-heading"><span>{plan.name}</span><strong>{plan.audience}</strong></div>
+                            <div className="pricing-price"><strong>{plan.price}</strong><span>{plan.cadence}</span></div>
+                            <ul>{plan.features.map(feature => <li key={feature}><span aria-hidden="true">✓</span>{feature}</li>)}</ul>
+                            <button className="pricing-action" type="button" onClick={openEntryChooser}>{plan.action}<span aria-hidden="true">→</span></button>
+                        </article>)}
+                    </div>
+                    <div className="pricing-enterprise"><div><span className="eyebrow">Need more control?</span><strong>Talk to us about an organization workspace.</strong></div><a href="mailto:support@financialanalyzer.app">Contact us <span aria-hidden="true">→</span></a></div>
+                </section>
+
                 <section className="landing-cta">
                     <div className="cta-panel">
                         <div>
                             <span className="eyebrow">Ready to get started?</span>
                             <h2>Ready to understand your financial reports?</h2>
                         </div>
-                        <button className="primary-button landing-gold-cta" type="button" onClick={onGetStarted}>
+                        <button className="primary-button landing-gold-cta" type="button" onClick={openEntryChooser}>
                             Get Started
                         </button>
                     </div>
                 </section>
             </main>
+            {entryChooserOpen && <div className="entry-chooser-layer">
+                <button className="auth-dialog-backdrop" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)} />
+                <section className="entry-chooser" role="dialog" aria-modal="true" aria-labelledby="entry-chooser-title">
+                    <button className="auth-close" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)}>×</button>
+                    <span className="eyebrow">Start with clarity</span>
+                    <h2 id="entry-chooser-title">How will you use Financial Analyzer?</h2>
+                    <p>Choose an option to continue. You can change this later by signing out.</p>
+                    <AuthPathChooser standalone onSelect={selectEntryPath} />
+                </section>
+            </div>}
         </div>
     );
 }
@@ -378,18 +414,30 @@ const appDocs = [
 
 function RegistrationFields({ authForm, onChange }) {
     const isOwner = authForm.registrationIntent === "owner";
-    return <>
-        <fieldset className="auth-registration-intent">
-            <legend>How will you use Financial Analyzer?</legend>
-            <label><input type="radio" name="registrationIntent" value="owner" checked={isOwner} onChange={onChange} />I own/manage a company</label>
-            <label><input type="radio" name="registrationIntent" value="consumer" checked={!isOwner} onChange={onChange} />I only want to view/analyze companies shared with me</label>
-        </fieldset>
-        {isOwner && <div className="auth-company-fields">
-            <div className="auth-form-section">Company information</div>
-            <label>Company Name *<input name="companyName" type="text" value={authForm.companyName} onChange={onChange} required autoComplete="organization" /></label>
-            <div className="auth-field-row"><label>CIN *<input name="cin" type="text" value={authForm.cin} onChange={onChange} required maxLength="30" /></label><label>PAN (optional)<input name="pan" type="text" value={authForm.pan} onChange={onChange} maxLength="20" /></label></div>
-        </div>}
-    </>;
+    return isOwner ? <div className="auth-company-fields">
+            <div className="auth-form-section"><strong>Company information</strong><small>We use these details to match your financial reports.</small></div>
+            <label>Company Name *<input name="companyName" type="text" placeholder="Registered company name" value={authForm.companyName} onChange={onChange} required autoComplete="organization" /></label>
+            <div className="auth-field-row"><label>CIN *<input name="cin" type="text" placeholder="Enter your company CIN" value={authForm.cin} onChange={onChange} required maxLength="30" /></label><label>PAN (optional)<input name="pan" type="text" placeholder="Optional PAN" value={authForm.pan} onChange={onChange} maxLength="20" /></label></div>
+        </div> : null;
+}
+
+function AuthPathChooser({ authMode = "", registrationIntent = "owner", onSelect, standalone = false }) {
+    const paths = [
+        { id: "owner", number: "01", title: "Create a company workspace", description: "For owners and managers who upload and analyze their own reports.", mode: "register", intent: "owner" },
+        { id: "login", number: "02", title: "Sign in to a company workspace", description: "For existing users who already have account access to a company.", mode: "login", intent: registrationIntent },
+        { id: "consumer", number: "03", title: "View a shared workspace", description: "For people invited to analyze reports shared by a company.", mode: "register", intent: "consumer" },
+    ];
+    return <div className="auth-paths" aria-label="Choose how to continue">
+        <div className="auth-paths-heading"><strong>How would you like to continue?</strong><span>Choose the option that fits you best.</span></div>
+        <div className="auth-path-grid">
+            {paths.map(path => {
+                const selected = !standalone && path.mode === authMode && (path.mode === "login" || path.intent === registrationIntent);
+                return <button type="button" className={`auth-path-card auth-path-${path.id} ${selected ? "is-selected" : ""}`} key={path.id} onClick={() => onSelect(path.mode, path.intent)} aria-pressed={selected}>
+                    <span className="auth-path-number">{path.number}</span><span className="auth-path-copy"><strong>{path.title}</strong><small>{path.description}</small></span><span className="auth-path-arrow" aria-hidden="true">→</span>
+                </button>;
+            })}
+        </div>
+    </div>;
 }
 
 function GoogleLogo() {
@@ -434,6 +482,7 @@ function App() {
     const [authSubmitting, setAuthSubmitting] = useState(false);
     const [landingView, setLandingView] = useState("landing");
     const [authDialogOpen, setAuthDialogOpen] = useState(false);
+    const [entryChooserRequest, setEntryChooserRequest] = useState(0);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [identityState, setIdentityState] = useState({ status: "idle", identities: [], error: "" });
     const [uploadStatuses, setUploadStatuses] = useState([]);
@@ -477,11 +526,9 @@ function App() {
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(() => new Date());
     const currentDayPart = getDayPart(currentTime.getHours());
-    const [welcomeImageIndex, setWelcomeImageIndex] = useState(0);
     const analyticsRequestRef = useRef(0);
     const googleButtonRef = useRef(null);
     const fileInputRef = useRef(null);
-    const messageTimeoutRef = useRef(null);
     const googleInitializedRef = useRef(false);
 
     useEffect(() => {
@@ -549,11 +596,6 @@ function App() {
         const clock = window.setInterval(() => setCurrentTime(new Date()), 60 * 1000);
         return () => window.clearInterval(clock);
     }, []);
-
-    useEffect(() => {
-        const resetImage = window.setTimeout(() => setWelcomeImageIndex(0), 0);
-        return () => window.clearTimeout(resetImage);
-    }, [currentDayPart]);
 
     useEffect(() => {
         window.localStorage.setItem("financial-theme", darkMode ? "dark" : "light");
@@ -714,12 +756,18 @@ function App() {
         }
     }
 
-    const openAuthFlow = useCallback((mode = "login") => {
+    const openAuthFlow = useCallback((mode = "login", registrationIntent = "owner") => {
         setLandingView("landing");
         setAuthMode(mode);
+        setAuthForm(current => ({ ...current, registrationIntent, ...(registrationIntent === "consumer" ? { companyName: "", cin: "", pan: "" } : {}) }));
         setAuthMessage("");
         setAuthDialogOpen(true);
     }, []);
+
+    function returnToEntryOptions() {
+        setAuthDialogOpen(false);
+        setEntryChooserRequest(request => request + 1);
+    }
 
     useEffect(() => {
         if (!authDialogOpen) return undefined;
@@ -824,14 +872,14 @@ function App() {
     }
 
     if (authError) {
-        return <div className="app auth-loading"><div className="loading-card"><div className="status-banner error">{authError}</div></div></div>;
+        return <div className="app auth-loading"><div className="loading-card"><StatusMessage message={authError} tone="error" persist /></div></div>;
     }
 
     if (!user) {
         if (landingView === "landing") {
             return (
                 <>
-                    <LandingPage onGetStarted={() => openAuthFlow("register")} />
+                    <LandingPage onGetStarted={openAuthFlow} showEntryChooser={entryChooserRequest} />
                     {authDialogOpen && (
                         <div className="auth-dialog-layer">
                             <button className="auth-dialog-backdrop" type="button" aria-label="Close registration dialog" onClick={() => !authSubmitting && setAuthDialogOpen(false)} />
@@ -847,19 +895,20 @@ function App() {
                                 </div>
                                 <div className="auth-dialog-content">
                                     <button className="auth-close" type="button" aria-label="Close registration dialog" disabled={authSubmitting} onClick={() => setAuthDialogOpen(false)}>×</button>
-                                    <span className="eyebrow">{authMode === "login" ? "Welcome back" : "Start with clarity"}</span>
+                                    <span className="eyebrow">{authMode === "login" ? "Welcome back" : "Create a workspace"}</span>
                                     <h2 id="auth-dialog-title">{authMode === "login" ? "Sign in to your workspace" : "Create your account"}</h2>
                                     <p className="auth-dialog-intro">{authMode === "login" ? "Access your financial analysis dashboard." : "Set up your workspace in less than a minute."}</p>
+                                    <button type="button" className="auth-back-button" disabled={authSubmitting} onClick={returnToEntryOptions}>← Back to options</button>
                                     <form onSubmit={handleAuthSubmit} className="auth-form">
-                                        {authMode === "register" && <label>Name<input name="userName" type="text" value={authForm.userName} onChange={updateAuthField} required autoComplete="name" /></label>}
-                                        <label>{authMode === "login" ? "Email or username" : "Email"}<input name="email" type={authMode === "login" ? "text" : "email"} value={authForm.email} onChange={updateAuthField} required autoComplete={authMode === "login" ? "username" : "email"} /></label>
-                                            <label>Password<input name="password" type="password" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} /></label>
+                                        {authMode === "register" && <label>Name<input name="userName" type="text" placeholder="Your full name" value={authForm.userName} onChange={updateAuthField} required autoComplete="name" /></label>}
+                                        <label>{authMode === "login" ? "Email or username" : "Email"}<input name="email" type={authMode === "login" ? "text" : "email"} placeholder={authMode === "login" ? "Email or username" : "you@company.com"} value={authForm.email} onChange={updateAuthField} required autoComplete={authMode === "login" ? "username" : "email"} /></label>
+                                        <label>Password<input name="password" type="password" placeholder="At least 8 characters" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} /></label>
                                         {authMode === "register" && <RegistrationFields authForm={authForm} onChange={updateAuthField} />}
                                         <button className="primary-button" type="submit" disabled={authSubmitting}>{authSubmitting ? <LoadingIndicator label={authMode === "login" ? "Logging in..." : "Creating account..."} /> : authMode === "login" ? "Login" : "Create account"}</button>
                                     </form>
                                     {GOOGLE_CLIENT_ID && authForm.registrationIntent === "consumer" && <><div className="auth-divider"><span>or continue with</span></div><div className="google-auth-tools"><div className="google-login-button" ref={googleButtonRef} /><button type="button" className="google-fallback-button" onClick={handleGoogleFallback}><GoogleLogo />{authMode === "login" ? "Sign in with Google" : "Sign up with Google"}</button></div></>}
-                                    {authMessage && <div className="status-banner error">{authMessage}</div>}
-                                    <button type="button" className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>{authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}</button>
+                                    <StatusMessage message={authMessage} tone="error" />
+                                    <div className="auth-switch"><span>{authMode === "login" ? "New to Financial Analyzer?" : "Already have an account?"}</span><button type="button" className="auth-switch-button" aria-label={authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"} disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>{authMode === "login" ? "Create an account" : "Sign in"}</button></div>
                                 </div>
                             </section>
                         </div>
@@ -881,20 +930,21 @@ function App() {
                         <span className="eyebrow">{authMode === "login" ? "Welcome back" : "Join Financial Analyzer"}</span>
                         <h2>{authMode === "login" ? "Sign in to your workspace" : "Create your account"}</h2>
                         <p>{authMode === "login" ? "Access your financial analysis dashboard." : "Start turning reports into useful insight."}</p>
+                    <button type="button" className="auth-back-button" disabled={authSubmitting} onClick={returnToEntryOptions}>← Back to options</button>
                     <form onSubmit={handleAuthSubmit} className="auth-form">
                         {authMode === "register" && (
                             <label>
                                 Name
-                                <input name="userName" type="text" value={authForm.userName} onChange={updateAuthField} required autoComplete="name" />
+                                <input name="userName" type="text" placeholder="Your full name" value={authForm.userName} onChange={updateAuthField} required autoComplete="name" />
                             </label>
                         )}
                         <label>
                             {authMode === "login" ? "Email or username" : "Email"}
-                            <input name="email" type={authMode === "login" ? "text" : "email"} value={authForm.email} onChange={updateAuthField} required autoComplete={authMode === "login" ? "username" : "email"} />
+                            <input name="email" type={authMode === "login" ? "text" : "email"} placeholder={authMode === "login" ? "Email or username" : "you@company.com"} value={authForm.email} onChange={updateAuthField} required autoComplete={authMode === "login" ? "username" : "email"} />
                         </label>
                         <label>
                             Password
-                            <input name="password" type="password" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} />
+                            <input name="password" type="password" placeholder="At least 8 characters" value={authForm.password} onChange={updateAuthField} required minLength="8" autoComplete={authMode === "login" ? "current-password" : "new-password"} />
                         </label>
                         {authMode === "register" && <RegistrationFields authForm={authForm} onChange={updateAuthField} />}
                         <button className="primary-button" type="submit" disabled={authSubmitting}>
@@ -913,10 +963,10 @@ function App() {
                             </button>
                         </div>
                     </>}
-                    {authMessage && <div className="status-banner error">{authMessage}</div>}
-                    <button type="button" className="secondary-button" disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
-                        {authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}
-                    </button>
+                    <StatusMessage message={authMessage} tone="error" />
+                    <div className="auth-switch"><span>{authMode === "login" ? "New to Financial Analyzer?" : "Already have an account?"}</span><button type="button" className="auth-switch-button" aria-label={authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"} disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>
+                        {authMode === "login" ? "Create an account" : "Sign in"}
+                    </button></div>
                         </div>
                     </div>
                 </div>
@@ -926,7 +976,7 @@ function App() {
 
     if (window.location.pathname.startsWith("/admin")) {
         if (user.role !== "admin") {
-            return <div className="app auth-loading"><div className="loading-card"><div className="status-banner error">Admin access required.</div></div></div>;
+            return <div className="app auth-loading"><div className="loading-card"><StatusMessage message="Admin access required." tone="error" persist /></div></div>;
         }
 
         return <AdminDashboard user={user} onLogout={handleLogout} />;
@@ -968,6 +1018,7 @@ function App() {
 
     function removeSelectedFile(identity) {
         setSelectedFiles(current => removeFileByIdentity(current, identity));
+        setUploadStatuses([]);
         setMessage("");
     }
 
@@ -991,10 +1042,6 @@ function App() {
 
         const filesToUpload = [...selectedFiles];
 
-        if (messageTimeoutRef.current) {
-            window.clearTimeout(messageTimeoutRef.current);
-            messageTimeoutRef.current = null;
-        }
         setUploading(true);
         setAnalyticsLoading({ assets: false, liabilities: false, profitLoss: false });
         if (!activeDocumentId) {
@@ -1055,10 +1102,6 @@ function App() {
             await loadQuota();
             setMessage("Balance sheet analytics loaded successfully.");
             setSelectedFiles([]);
-            messageTimeoutRef.current = window.setTimeout(() => {
-                setMessage("");
-                messageTimeoutRef.current = null;
-            }, 2500);
             focusAnalytics();
         } catch (error) {
             console.error("Upload / analytics error:", error);
@@ -1138,8 +1181,6 @@ function App() {
         ? activeChart
         : defaultAnalyticsTab;
     const dayPart = currentDayPart;
-    const welcomeImageSources = getWelcomeImageSources(dayPart);
-    const welcomeImageUrl = welcomeImageSources[welcomeImageIndex];
     const firstName = String(user.userName || "there").trim().split(/\s+/)[0];
     const companies = getUserCompanies(user);
     const dayPartCopy = {
@@ -1177,7 +1218,7 @@ function App() {
                 </header>
                 <div className="content-grid" id="dashboard">
                     <section className={`welcome-panel welcome-panel-${dayPart}`}>
-                        <img className="welcome-photo" src={welcomeImageUrl} alt="" aria-hidden="true" onError={() => setWelcomeImageIndex(index => index < welcomeImageSources.length - 1 ? index + 1 : index)} />
+                        <video className="welcome-photo" src={workspaceWelcomeVideo} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
                         <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : "Good evening"}, {firstName}.</h2><p>{dayPartCopy} Upload a report to turn raw statements into useful insight.</p><a className="welcome-action" href="#upload">Review your numbers <span aria-hidden="true">→</span></a></div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </section>
@@ -1196,7 +1237,17 @@ function App() {
                         {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">{uploadStatuses.some(status => status.status === "failed") ? "Upload results" : "Analyzing reports"}</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
                         {(identityState.status !== "idle" && !(identityState.status === "verified" && selectedFiles.length === 1)) && <div className={`identity-status identity-status-${identityState.status}`} aria-live="polite">{identityState.status === "verified" && selectedFiles.length > 1 ? <><strong>Reports verified</strong><span>Same company · CIN matched</span></> : identityState.status === "conflict" ? <><strong>Reports don't belong to the same company</strong><span>{identityState.error}</span></> : identityState.status === "incomplete" || identityState.status === "error" ? <><strong>Company identity could not be verified</strong><span>{identityState.error}</span></> : identityState.status === "checking" ? <span>Checking report identity...</span> : null}</div>}
                                         <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canUploadActiveCompany || !canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany))}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && !uploadStatuses.some(status => status.status === "failed") && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState, Boolean(activeCompany)) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
-                        {message && <div className={`status-banner ${uploading ? "loading" : message.includes("Unable") || message.includes("Please") || message.includes("permission") ? "error" : "success"}`}><strong>{uploading ? "Processing report" : message.includes("Unable") || message.includes("permission") ? "Upload could not be completed" : "Report update"}</strong><span>{message}</span></div>}
+                        <StatusMessage
+                            message={message}
+                            loading={uploading || analyticsBusy || documentsLoading}
+                            tone={message.includes("Unable") || message.includes("Please") || message.includes("permission") ? "error" : undefined}
+                            loadingMessages={[
+                                message || "Preparing your workspace...",
+                                "Reading the report structure...",
+                                "Extracting financial statements...",
+                                "Building your financial insights...",
+                            ]}
+                        />
                     </section>
                     {documents.length > 0 && <section className="insights-section" id="analytics" tabIndex="-1">
                         <div className="insights-heading-row">
