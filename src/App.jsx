@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import "./App.css";
 
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
@@ -82,57 +83,35 @@ function getDayPart(hour) {
     return "night";
 }
 
-const landingSteps = [
-    {
-        number: "01",
-        title: "Upload",
-        description: "Upload your financial report or PDF to start the review.",
-    },
-    {
-        number: "02",
-        title: "Analyse",
-        description: "AI extracts and analyses the financial statements automatically.",
-    },
-    {
-        number: "03",
-        title: "Understand",
-        description: "Get metrics, comparisons and actionable insights in plain language.",
-    },
-];
-
-const landingPlans = [
-    { name: "Free", audience: "For a first look", price: "$0", cadence: "to get started", features: ["1 PDF upload", "Core financial analytics", "Shared company viewing"], action: "Start free", tone: "quiet" },
-    { name: "$99 Plan", audience: "For owners and managers", price: "$99", cadence: "for 25 PDF uploads", features: ["25 PDF uploads", "Balance sheet analytics", "Profit and loss insights", "Report history"], action: "Choose $99", tone: "featured", badge: "Most popular" },
-    { name: "$250 Plan", audience: "For growing teams", price: "$250", cadence: "for 250 PDF uploads", features: ["250 PDF uploads", "Everything in $99 Plan", "More room for report history", "Priority capacity"], action: "Choose $250", tone: "quiet" },
-];
-
-const landingHeroMedia = [
-    {
-        source: "https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4",
-        label: "Financial analyzer product preview",
-        trimStart: 0.35,
-    },
-    {
-        source: "https://cdn.dribbble.com/userupload/14328298/file/original-c43c723b1303ac42ca5944dfb535c116.mp4",
-        label: "Financial insights product preview",
-        trimStart: 4,
-    },
-    {
-        type: "image",
-        source: "https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=1200x900&vertical=center",
-        srcSet: "https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=300x225&vertical=center 300w, https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=600x450&vertical=center 600w, https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=1200x900&vertical=center 1200w, https://cdn.dribbble.com/userupload/48743956/file/74974ed5bb268cdcebe91bfb491d28c5.png?resize=2048x1536&vertical=center 2048w",
-        label: "Financial analysis workspace illustration",
-    },
-];
 const workspaceWelcomeVideo = "https://cdn.dribbble.com/userupload/15158652/file/original-d1a0d5fa39a82f7bbe884e1d1e3bef36.mp4";
+const landingDemoStages = [
+    { label: "Checking report identity", detail: "CIN matched to workspace", progress: 28, metric: "1 / 3" },
+    { label: "Extracting statements", detail: "18 line items found", progress: 64, metric: "2 / 3" },
+    { label: "Writing findings", detail: "2 changes worth a look", progress: 92, metric: "3 / 3" },
+];
 
 function LandingPage({ onGetStarted, showEntryChooser }) {
-    const [activeHeroMedia, setActiveHeroMedia] = useState(0);
     const [entryChooserOpen, setEntryChooserOpen] = useState(false);
+    const [demoStageIndex, setDemoStageIndex] = useState(0);
+    const heroVisualRef = useRef(null);
+    const prefersReducedMotion = useReducedMotion();
+    const { scrollYProgress } = useScroll({ target: heroVisualRef, offset: ["start end", "end start"] });
+    const heroY = useTransform(scrollYProgress, [0, 1], [18, -18]);
+    const demoStage = landingDemoStages[demoStageIndex];
 
     useEffect(() => {
-        if (showEntryChooser) setEntryChooserOpen(true);
+        if (!showEntryChooser) return undefined;
+        const openTimer = window.setTimeout(() => setEntryChooserOpen(true), 0);
+        return () => window.clearTimeout(openTimer);
     }, [showEntryChooser]);
+
+    useEffect(() => {
+        if (prefersReducedMotion) return undefined;
+        const demoTimer = window.setInterval(() => {
+            setDemoStageIndex(current => (current + 1) % landingDemoStages.length);
+        }, 2600);
+        return () => window.clearInterval(demoTimer);
+    }, [prefersReducedMotion]);
 
     function openEntryChooser() {
         setEntryChooserOpen(true);
@@ -143,181 +122,42 @@ function LandingPage({ onGetStarted, showEntryChooser }) {
         onGetStarted(mode, registrationIntent);
     }
 
-    useEffect(() => {
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
-        const rotation = window.setInterval(() => {
-            setActiveHeroMedia(current => (current + 1) % landingHeroMedia.length);
-        }, 7000);
-        return () => window.clearInterval(rotation);
-    }, []);
+    const reveal = { hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0 } };
+    const stagger = { visible: { transition: { staggerChildren: 0.08 } } };
+    const fadeViewport = { once: true, amount: 0.25 };
 
     return (
-        <div className="landing-page">
-            <header className="landing-header">
-                <div className="landing-shell landing-nav">
-                    <div className="brand-lockup">
-                        <span className="brand-mark">₹</span>
-                        <strong>Financial Analyzer</strong>
-                    </div>
-                    <nav className="landing-nav-links" aria-label="Main navigation">
-                        <a href="#features">Features</a>
-                        <a href="#how-it-works">How It Works</a>
-                        <a href="#pricing">Pricing</a>
-                        <a href="#benefits">Benefits</a>
-                    </nav>
-                    <button className="primary-button landing-nav-button landing-gold-cta" type="button" onClick={openEntryChooser}>
-                        Get Started
-                    </button>
+        <div className="landing-page nl-page">
+            <header className="nl-masthead">
+                <motion.div className="nl-scroll-progress" style={{ scaleX: scrollYProgress }} />
+                <div className="nl-shell nl-mast-inner">
+                    <div className="nl-brand"><span className="nl-brand-mark">₹</span><span className="nl-brand-name">Financial Analyzer</span></div>
+                    <nav className="nl-nav" aria-label="Sections"><a href="#reading">How it reads</a><a href="#findings">Findings</a><a href="#plans">Plans</a></nav>
+                    <motion.button className="nl-btn" type="button" onClick={openEntryChooser} whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}>Analyse a report <i aria-hidden="true">→</i></motion.button>
                 </div>
             </header>
-
-            <main className="landing-shell landing-main">
-                <section className="landing-hero">
-                    <div className="landing-hero-copy">
-                        <span className="eyebrow landing-eyebrow">AI-powered financial analysis</span>
-                        <h1>Turn Financial Reports Into Clear Business Insights</h1>
-                        <p>
-                            Upload your financial statements and instantly understand revenue, profitability,
-                            cash flow, balance sheet health, trends and key financial insights.
-                        </p>
-                        <div className="landing-hero-actions">
-                            <button className="primary-button landing-gold-cta" type="button" onClick={openEntryChooser}>
-                                Get Started
-                            </button>
-                        </div>
-                        <div className="landing-trust-row" aria-label="Product highlights">
-                            <span>
-                                <strong>2x</strong> faster analysis
-                            </span>
-                            <span>
-                                <strong>24/7</strong> insight support
-                            </span>
-                            <span>
-                                <strong>PDF</strong> upload ready
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="landing-hero-visual">
-                        <div className="hero-visual-shell">
-                            <div className="hero-visual-topline"><span>Financial Analyzer workspace</span><span className="hero-visual-status"><i /> Live preview</span></div>
-                            <section className="landing-features landing-video-section landing-hero-gallery" id="features" aria-label="Product preview">
-                                <div className="landing-gallery-main">
-                                    {landingHeroMedia.map((media, mediaIndex) => media.type === "image" ? (
-                                        <img className={`landing-feature-image${mediaIndex === activeHeroMedia ? " is-active" : ""}`} key={media.source} src={media.source} srcSet={media.srcSet} sizes="(max-width: 760px) calc(100vw - 32px), 1120px" alt={media.label} aria-hidden={mediaIndex !== activeHeroMedia} />
-                                    ) : (
-                                        <video
-                                            className={`landing-feature-video${mediaIndex === activeHeroMedia ? " is-active" : ""}`}
-                                            key={media.source}
-                                            src={media.source}
-                                            autoPlay
-                                            muted
-                                            loop
-                                            playsInline
-                                            preload="auto"
-                                            onLoadedMetadata={(event) => {
-                                                event.currentTarget.currentTime = media.trimStart;
-                                            }}
-                                            onCanPlay={(event) => {
-                                                event.currentTarget.currentTime = media.trimStart;
-                                                event.currentTarget.play().catch(() => {});
-                                            }}
-                                            onTimeUpdate={(event) => {
-                                                if (event.currentTarget.currentTime >= media.trimStart + 4) {
-                                                    event.currentTarget.currentTime = media.trimStart;
-                                                }
-                                            }}
-                                            aria-label={mediaIndex === activeHeroMedia ? media.label : undefined}
-                                            aria-hidden={mediaIndex !== activeHeroMedia}
-                                        />
-                                    ))}
-                                    <div className="hero-visual-overlay hero-visual-kpi"><span>Profit margin</span><strong>18.6%</strong><small>+4.2% this year</small></div>
-                                    <div className="hero-visual-overlay hero-visual-insight"><span><i /> Insight found</span><strong>Revenue is trending upward</strong></div>
-                                </div>
-                            </section>
-                            <div className="hero-visual-caption"><span>See the story behind every figure.</span><span>Balance sheet · Profit &amp; loss · Trends</span></div>
-                        </div>
-                    </div>
-
-                </section>
-
-                <section className="landing-steps" id="how-it-works">
-                    <div className="section-header landing-section-header">
-                        <div>
-                            <span className="eyebrow">How it works</span>
-                            <h2>From raw statements to clear business understanding</h2>
-                        </div>
-                    </div>
-                    <div className="steps-grid">
-                        {landingSteps.map((step) => (
-                            <article className="step-card" key={step.number}>
-                                <span className="step-number">{step.number}</span>
-                                <h3>{step.title}</h3>
-                                <p>{step.description}</p>
-                            </article>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="landing-benefits" id="benefits">
-                    <div className="benefit-panel">
-                        <div className="benefit-copy">
-                            <span className="eyebrow">Why teams use it</span>
-                            <h2>See trends, risks and opportunities in one place</h2>
-                            <p>
-                                Turn financial statements into focused insight for performance reviews,
-                                planning conversations, and faster decision-making across the business.
-                            </p>
-                        </div>
-                        <div className="benefit-points">
-                            <div>
-                                <strong>Operational clarity</strong>
-                                <span>Understand revenue, cash movement and profitability without manual spreadsheet work.</span>
-                            </div>
-                            <div>
-                                <strong>Faster reviews</strong>
-                                <span>Surface the metrics and changes that matter most for financial planning.</span>
-                            </div>
-                            <div>
-                                <strong>Actionable insight</strong>
-                                <span>Support conversations with concise explanations and direct comparisons.</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="landing-pricing" id="pricing" aria-labelledby="pricing-title">
-                    <div className="landing-section-header pricing-header">
-                        <div>
-                            <span className="eyebrow">Plans that stay simple</span>
-                            <h2 id="pricing-title">Choose the right amount of room for your reports</h2>
-                        </div>
-                        <p>Start small, then upgrade when your analysis needs grow. Every plan keeps the same focused workspace.</p>
-                    </div>
-                    <div className="pricing-grid">
-                        {landingPlans.map(plan => <article className={`pricing-card pricing-card-${plan.tone}`} key={plan.name}>
-                            {plan.badge && <span className="pricing-badge">{plan.badge}</span>}
-                            <div className="pricing-card-heading"><span>{plan.name}</span><strong>{plan.audience}</strong></div>
-                            <div className="pricing-price"><strong>{plan.price}</strong><span>{plan.cadence}</span></div>
-                            <ul>{plan.features.map(feature => <li key={feature}><span aria-hidden="true">✓</span>{feature}</li>)}</ul>
-                            <button className="pricing-action" type="button" onClick={openEntryChooser}>{plan.action}<span aria-hidden="true">→</span></button>
-                        </article>)}
-                    </div>
-                    <div className="pricing-enterprise"><div><span className="eyebrow">Need more control?</span><strong>Talk to us about an organization workspace.</strong></div><a href="mailto:support@financialanalyzer.app">Contact us <span aria-hidden="true">→</span></a></div>
-                </section>
-
-                <section className="landing-cta">
-                    <div className="cta-panel">
-                        <div>
-                            <span className="eyebrow">Ready to get started?</span>
-                            <h2>Ready to understand your financial reports?</h2>
-                        </div>
-                        <button className="primary-button landing-gold-cta" type="button" onClick={openEntryChooser}>
-                            Get Started
-                        </button>
-                    </div>
-                </section>
+            <main id="main">
+                <section className="nl-hero"><div className="nl-shell nl-hero-grid">
+                    <motion.div className="nl-hero-copy" variants={stagger} initial="hidden" animate="visible">
+                        <motion.span className="nl-eyebrow" variants={reveal}>Reads MCA annual reports · Schedule III</motion.span>
+                        <motion.h1 className="nl-h1" variants={reveal}>Your annual report, <em>read closely.</em></motion.h1>
+                        <motion.p className="nl-lede" variants={reveal}>Upload a financial report. Get the numbers, the trends, and the few things worth your attention.</motion.p>
+                        <motion.div className="nl-hero-actions" variants={reveal}><motion.button className="nl-btn nl-btn-lg" type="button" onClick={openEntryChooser} whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }}>Analyse a report <i aria-hidden="true">→</i></motion.button><motion.a className="nl-btn nl-btn-lg nl-btn-ghost" href="#findings" whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }}>See what it finds</motion.a></motion.div>
+                        <motion.div className="nl-proof-strip" variants={reveal}><div><strong>18</strong><span>line items</span></div><div><strong>2</strong><span>findings surfaced</span></div><div><strong>1 min</strong><span>to first read</span></div></motion.div>
+                    </motion.div>
+                    <motion.div ref={heroVisualRef} className="nl-doc-wrap" style={{ y: prefersReducedMotion ? 0 : heroY }} initial={{ opacity: 0, rotate: 1 }} animate={{ opacity: 1, rotate: 0 }} transition={{ delay: 0.25, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}>
+                        <figure className="nl-doc"><motion.div className="nl-scan-line" animate={prefersReducedMotion ? { opacity: 0 } : { top: ["10%", "90%", "10%"], opacity: [0, 0.8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} aria-hidden="true" /><motion.div className="nl-live-console" key={demoStage.label} initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}><span className="nl-live-dot" /><span>{demoStage.label}</span><b>{demoStage.metric}</b><i><motion.span animate={{ width: `${demoStage.progress}%` }} transition={{ duration: 0.6 }} /></i><small>{demoStage.detail}</small></motion.div><div className="nl-doc-head"><span className="nl-doc-co">Meridian Alloys Private Limited</span><span className="nl-tag">Sample</span><span className="nl-doc-cin">CIN <b>U27100PB2022PTC000000</b> · matched to your workspace</span></div><div className="nl-doc-caption">Balance sheet as at 31 March 2025 · Equity and liabilities · ₹</div>
+                            <table className="nl-table"><caption>Extract of a balance sheet with findings noted against source rows</caption><thead><tr><th>Particulars</th><th className="nl-refhead">Note</th><th className="nl-num">As at 31.03.2025</th></tr></thead><tbody><tr className="nl-group"><td colSpan="3">Shareholders’ funds</td></tr><tr className="nl-row"><td>Share capital</td><td className="nl-ref">Note 3</td><td className="nl-num">1,20,00,000</td></tr><tr className="nl-row nl-linked"><td>Reserves and surplus</td><td className="nl-ref">Note 4</td><td className="nl-num">3,42,18,640</td></tr><tr className="nl-anno"><td colSpan="3"><div className="nl-note"><span className="nl-elbow">↳</span><p className="nl-note-body"><b>Finding</b>Up 24% on last year. The buffer is real.</p></div></td></tr><tr className="nl-group"><td colSpan="3">Current liabilities</td></tr><tr className="nl-row nl-linked nl-flag"><td>Trade payables</td><td className="nl-ref">Note 7</td><td className="nl-num">94,22,180</td></tr><tr className="nl-anno nl-flag"><td colSpan="3"><div className="nl-note"><span className="nl-elbow">↳</span><p className="nl-note-body"><b>Worth a look</b>Payables grew 31% against 9% revenue growth.</p></div></td></tr><tr className="nl-row"><td>Short-term provisions</td><td className="nl-ref">Note 8</td><td className="nl-num">31,08,450</td></tr><tr className="nl-total"><td>Total</td><td></td><td className="nl-num">7,73,89,270</td></tr></tbody></table>
+                            <figcaption className="nl-doc-foot"><span>33 pages read</span><span>·</span><span>18 line items extracted</span><span>2 findings</span></figcaption>
+                        </figure><motion.div className="nl-stamp" initial={{ opacity: 0, scale: 0.8, rotate: -7 }} animate={{ opacity: 0.92, scale: 1, rotate: -7 }} transition={{ delay: 1, type: "spring", stiffness: 220, damping: 16 }}><b>Read</b><span>31 Mar 2025</span></motion.div>
+                    </motion.div>
+                </div></section>
+                <section className="nl-band nl-band-paper" id="reading"><div className="nl-shell"><motion.div className="nl-band-head" variants={stagger} initial="hidden" whileInView="visible" viewport={fadeViewport}><motion.span className="nl-eyebrow" variants={reveal}>How it reads a filing</motion.span><motion.h2 className="nl-h2" variants={reveal}>From PDF to point of view.</motion.h2><motion.p className="nl-lede" variants={reveal}>Three quick passes. One useful read.</motion.p></motion.div><div className="nl-stages">{[{ label: "01 · Verify", title: "Right company", text: "CIN matched before upload.", rows: ["CIN · U27100PB2022PTC000000", "Match · Confirmed", "Upload · Ready"] }, { label: "02 · Extract", title: "Clean numbers", text: "Tables pulled from the report.", rows: ["Share capital · 1,20,00,000", "Reserves · 3,42,18,640", "18 of 18 · extracted"] }, { label: "03 · Explain", title: "Clear findings", text: "Trends turned into sentences.", rows: ["Current ratio · 1.42", "Interest cover · 4.1×", "Worth a look · 2"] }].map(stage => <motion.article className="nl-stage" key={stage.label} variants={reveal} initial="hidden" whileInView="visible" viewport={fadeViewport}><span className="nl-stage-label">{stage.label}</span><h3>{stage.title}</h3><p>{stage.text}</p><div className="nl-mini">{stage.rows.map(row => <div className="nl-mini-row" key={row}><span>{row.split(" · ")[0]}</span><span>{row.split(" · ")[1]}</span></div>)}</div></motion.article>)}</div></div></section>
+                <section className="nl-band nl-band-deep" id="findings"><div className="nl-shell"><div className="nl-band-head"><span className="nl-eyebrow">What it finds</span><h2 className="nl-h2">The few things worth a look.</h2><p className="nl-lede">Every insight stays linked to its source row.</p></div><div className="nl-findings">{[{ name: "Reserves and surplus", metric: "+24% year on year", quote: "Growth was funded from inside the business.", source: "Note 4 · Note 5" }, { name: "Trade payables", metric: "+31% year on year", quote: "Payables grew faster than revenue. Cash is being held back.", source: "Note 7 · Profit and loss", flag: true }, { name: "Current ratio", metric: "1.42, from 1.78", quote: "Still comfortable, but the direction is worth watching.", source: "Note 7 · Note 8" }, { name: "Interest cover", metric: "4.1×", quote: "Debt is not the thing to worry about here.", source: "Note 5 · Finance costs" }].map(finding => <motion.article className="nl-finding" data-flag={finding.flag || undefined} key={finding.name} initial="hidden" whileInView="visible" viewport={fadeViewport} variants={reveal}><div className="nl-finding-meta"><b>{finding.name}</b><span>{finding.metric}</span></div><q>{finding.quote}</q><span className="nl-finding-src">Traced to {finding.source}</span></motion.article>)}</div></div></section>
+                <section className="nl-band nl-band-paper" id="plans"><div className="nl-shell"><div className="nl-band-head"><span className="nl-eyebrow">Plans</span><h2 className="nl-h2">Priced by reports, not by seats.</h2><p className="nl-lede">Start with one report and see whether the reading is useful. The only thing that changes is how many filings you can put through it.</p></div><div className="nl-plans">{[{ name: "Free", audience: "For a first look", price: "$0", reports: "1 report", features: ["Core analytics", "Shared company viewing"] }, { name: "Standard", audience: "For owners and managers", price: "$99", reports: "25 reports", features: ["Balance sheet analytics", "Profit and loss insights", "Report history"], featured: true }, { name: "Volume", audience: "For growing teams", price: "$250", reports: "250 reports", features: ["Everything in Standard", "Longer report history", "Priority capacity"] }].map(plan => <motion.div className="nl-plan" data-featured={plan.featured || undefined} key={plan.name} initial="hidden" whileInView="visible" viewport={fadeViewport} variants={reveal}><div className="nl-plan-name"><strong>{plan.name}</strong><span>{plan.audience}</span></div><div className="nl-plan-price"><strong>{plan.price}</strong><span>{plan.reports}</span></div><div className="nl-plan-inc">{plan.features.map(feature => <span key={feature}><i>✓</i>{feature}</span>)}</div><button className={`nl-btn ${plan.featured ? "" : "nl-btn-ghost"}`} type="button" onClick={openEntryChooser}>{plan.featured ? "Choose Standard" : plan.name === "Free" ? "Start free" : "Choose Volume"}</button></motion.div>)}</div><p className="nl-plan-note"><span>Need more than one company in one workspace?</span><a href="mailto:support@financialanalyzer.app">Write to us</a></p></div></section>
+                <section className="nl-close"><div className="nl-shell nl-close-grid"><span className="nl-eyebrow">Ready when you are</span><h2>Bring the filing you have been putting off.</h2><p>One PDF, no card. You will know inside a minute whether the reading is useful.</p><button className="nl-btn nl-btn-lg nl-btn-inv" type="button" onClick={openEntryChooser}>Analyse a report <i aria-hidden="true">→</i></button></div></section>
             </main>
+            <footer className="nl-foot"><div className="nl-shell nl-foot-inner"><span>₹ Financial Analyzer</span><a href="mailto:support@financialanalyzer.app">support@financialanalyzer.app</a><span>Figures shown are a sample, not a real filing.</span></div></footer>
             {entryChooserOpen && <div className="entry-chooser-layer">
                 <button className="auth-dialog-backdrop" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)} />
                 <section className="entry-chooser" role="dialog" aria-modal="true" aria-labelledby="entry-chooser-title">
