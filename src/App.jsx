@@ -579,7 +579,7 @@ function App() {
             return () => {
                 cancelled = true;
             };
-        }, [user, activeCompany?.companyId]);
+        }, [user?.userId, activeCompany?.companyId]);
 
     function updateAuthField(event) {
         setAuthForm(current => {
