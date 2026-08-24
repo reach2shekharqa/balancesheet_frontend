@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getValidYears, numericValue } from "../utils/analyticsData";
 
@@ -81,4 +82,4 @@ function AssetsComparisonChart({ analyticsData }) {
     );
 }
 
-export default AssetsComparisonChart;
+export default memo(AssetsComparisonChart);

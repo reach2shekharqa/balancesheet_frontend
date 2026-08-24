@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getValidYears, isComponentRow, numericValue } from "../utils/analyticsData";
 
@@ -103,4 +104,4 @@ function AssetsBreakdownChart({ analyticsData, selectedYear = null }) {
     );
 }
 
-export default AssetsBreakdownChart;
+export default memo(AssetsBreakdownChart);

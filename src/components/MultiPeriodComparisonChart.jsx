@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactECharts from "echarts-for-react";
 
 import { deriveFinancialPeriods, getFinancialMetric } from "../utils/financialStatementData";
@@ -63,4 +64,4 @@ function MultiPeriodComparisonChart({ title, subtitle, sources, seriesDefinition
     return <ReactECharts option={option} style={{ height: "390px", width: "100%" }} notMerge={true} lazyUpdate={false} />;
 }
 
-export default MultiPeriodComparisonChart;
+export default memo(MultiPeriodComparisonChart);

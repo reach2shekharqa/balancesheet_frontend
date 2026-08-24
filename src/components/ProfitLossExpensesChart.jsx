@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getExpenseBreakdownRows, getValidYears, numericValue } from "../utils/analyticsData";
 
@@ -117,4 +118,4 @@ function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
     );
 }
 
-export default ProfitLossExpensesChart;
+export default memo(ProfitLossExpensesChart);

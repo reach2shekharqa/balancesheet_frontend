@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getExpenseBreakdownRows, getValidYears, numericValue } from "../utils/analyticsData";
 
@@ -70,4 +71,4 @@ function ProfitLossComparisonChart({ analyticsData }) {
     );
 }
 
-export default ProfitLossComparisonChart;
+export default memo(ProfitLossComparisonChart);

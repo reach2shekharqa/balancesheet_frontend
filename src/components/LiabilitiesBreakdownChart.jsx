@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getValidYears, isPieComponent, numericValue } from "../utils/analyticsData";
 
@@ -93,4 +94,4 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     );
 }
 
-export default LiabilitiesBreakdownChart;
+export default memo(LiabilitiesBreakdownChart);
