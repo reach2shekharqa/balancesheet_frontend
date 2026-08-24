@@ -627,6 +627,7 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .welcome-action { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--accent-dark); font-size: 12px; font-weight: 800; text-decoration: none; }
 .welcome-action span { font-size: 17px; line-height: 1; transition: transform .2s ease; }
 .welcome-action:hover span { transform: translateX(3px); }
+.welcome-action-disabled { opacity: .62; cursor: default; }
 .welcome-panel-night .welcome-action { color: #b8d8ff; }
 .welcome-panel .welcome-mark { z-index: 2; }
 .welcome-mark { position: relative; width: 175px; height: 100px; flex: 0 0 auto; color: var(--accent); }
@@ -862,10 +863,19 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
     .insight-workspace-main .analytics-tabs { width: 100%; flex-wrap: wrap; }
     .insight-workspace-main .analytics-tabs button { flex: 1 1 110px; min-width: 0; white-space: normal; line-height: 1.2; }
     .assets-chart { width: 100%; min-width: 0; overflow: hidden; }
-    .key-metrics-1a-table { min-width: 0; table-layout: fixed; }
-    .key-metrics-1a-table th, .key-metrics-1a-table td { min-width: 0; padding: 10px 6px; white-space: normal; overflow-wrap: anywhere; }
-    .key-metrics-1a-table th:first-child, .key-metrics-1a-table tbody th { position: static; min-width: 0; width: 40%; }
-    .key-metrics-1a-table th:first-child, .key-metrics-1a-table tbody th { background: transparent; }
+    .key-metrics-1a-table-wrap { overflow: visible; }
+    .key-metrics-1a-table { display: block; min-width: 0; }
+    .key-metrics-1a-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
+    .key-metrics-1a-table tbody { display: grid; gap: 12px; }
+    .key-metrics-1a-table tr { display: grid; gap: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .key-metrics-1a-table th, .key-metrics-1a-table td { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: center; gap: 10px; min-width: 0; width: auto; padding: 9px 0; border-bottom: 1px solid var(--line); text-align: right; white-space: normal; overflow-wrap: anywhere; }
+    .key-metrics-1a-table tbody tr > th { display: block; padding-top: 0; border-bottom: 2px solid var(--line); text-align: left; }
+    .key-metrics-1a-table tbody tr > td:last-child { border-bottom: 0; }
+    .key-metrics-1a-table th:first-child, .key-metrics-1a-table tbody th { position: static; min-width: 0; background: transparent; }
+    .key-metrics-1a-table tbody td::before { content: attr(data-period); color: var(--muted); font-size: 11px; font-weight: 700; text-align: left; }
+    .key-metrics-1a-table td.is-current { border-radius: 0; }
+    .key-metrics-1a-table .key-metrics-1a-comparison { grid-column: 2; }
+    .key-metrics-1a-table .key-metrics-1a-details { grid-column: 2; }
     .key-metrics-grid { grid-template-columns: 1fr; }
     .key-metric-card { min-height: 170px; }
     .key-metrics-details-backdrop { align-items: end; padding: 0; }
@@ -1374,7 +1384,11 @@ button, input, textarea, select { font-family: "DM Sans", "Segoe UI", sans-serif
     .account-copy, .logout-button { display: none; }
     .theme-toggle span:last-child { display: none; }
     .content-grid { gap: 22px; padding: 22px 16px 42px; }
-    .workspace-footer { gap: 12px; padding-inline: 16px; }
+    .workspace-footer { align-items: stretch; gap: 16px; padding: 18px 16px 24px; border-top: 1px solid var(--line); }
+    .footer-brand { gap: 9px; }
+    .footer-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; width: 100%; }
+    .footer-navigation .footer-link { display: inline-flex; align-items: center; min-height: 32px; padding: 5px 0; font-size: 11px; }
+    .footer-navigation > span { grid-column: 1 / -1; min-height: 28px; padding-top: 6px; border-top: 1px solid var(--line); }
     .topbar-actions { flex: 1 1 100%; justify-content: flex-end; gap: 8px; width: 100%; }
     .document-selector, .period-selector { min-width: 0; width: 100%; max-width: 100%; }
     .account-controls { max-width: 100%; }

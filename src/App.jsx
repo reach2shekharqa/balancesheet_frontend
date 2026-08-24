@@ -342,16 +342,16 @@ function NavIcon({ children }) {
     return <span className="nav-icon" aria-hidden="true">{children}</span>;
 }
 
-function CompanyAccessSection({ companies, activeCompanyId, expanded, onToggle, expandedCompanies, onSelectCompany, onToggleCompany }) {
+function CompanyAccessSection({ companies, activeCompanyId, expanded, onToggle, expandedCompanies, onSelectCompany, onToggleCompany, idPrefix = "sidebar" }) {
     return <div className="sidebar-companies">
         <button className={`nav-item nav-button companies-toggle ${expanded ? "is-open" : ""}`} onClick={onToggle} aria-expanded={expanded} aria-controls="sidebar-companies-list">
             <NavIcon>+</NavIcon>
             Companies
             <span className="nav-chevron" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
         </button>
-        {expanded && <div className="sidebar-companies-list" id="sidebar-companies-list">
+        {expanded && <div className="sidebar-companies-list" id={`${idPrefix}-companies-list`}>
             {companies.length === 0 ? <p className="companies-empty">No company assigned</p> : companies.map(company => {
-                const companyDetailsId = `sidebar-company-${company.companyId}`;
+                const companyDetailsId = `${idPrefix}-company-${company.companyId}`;
                 const companyExpanded = expandedCompanies[company.companyId] === true;
                 const isSelected = String(activeCompanyId) === String(company.companyId);
                 return <div className="sidebar-company" key={company.companyId}>
@@ -618,6 +618,27 @@ function App() {
             })
             .finally(() => setAuthLoading(false));
     }, []);
+
+    useEffect(() => {
+        if (!user) return undefined;
+
+        const refreshUser = async () => {
+            if (document.visibilityState === "hidden") return;
+            try {
+                const result = await requestJson("/auth/me");
+                setUser(result.user);
+            } catch {
+                return;
+            }
+        };
+
+        window.addEventListener("focus", refreshUser);
+        document.addEventListener("visibilitychange", refreshUser);
+        return () => {
+            window.removeEventListener("focus", refreshUser);
+            document.removeEventListener("visibilitychange", refreshUser);
+        };
+    }, [user]);
 
     useEffect(() => {
         if (!user) {
@@ -1196,7 +1217,7 @@ function App() {
     return (
         <div className={`app workspace-app ${darkMode ? "theme-dark" : ""}`}>
             {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
-            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation"><span className="close-icon" aria-hidden="true"><span /><span /></span></button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#documents" onClick={() => setMobileNavOpen(false)}>Documents</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}<button className="mobile-logout" onClick={() => { setMobileNavOpen(false); handleLogout(); }}>Log out</button></nav>}
+            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation"><span className="close-icon" aria-hidden="true"><span /><span /></span></button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#upload" onClick={() => setMobileNavOpen(false)}>Upload a financial report</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}<CompanyAccessSection companies={companies} activeCompanyId={activeCompany?.companyId} expanded={companiesOpen} onToggle={() => setCompaniesOpen(open => !open)} expandedCompanies={expandedCompanies} onSelectCompany={companyId => { handleCompanySelect(companyId); setMobileNavOpen(false); }} onToggleCompany={companyId => setExpandedCompanies(current => ({ ...current, [companyId]: !current[companyId] }))} idPrefix="mobile" /><button className="mobile-logout" onClick={() => { setMobileNavOpen(false); handleLogout(); }}>Log out</button></nav>}
             <aside className="sidebar">
                 <div className="brand-lockup"><span className="brand-mark">₹</span><strong>Financial<br />Analyzer</strong></div>
                 <div className="sidebar-label">Workspace</div>
@@ -1213,28 +1234,28 @@ function App() {
             <main className="workspace-main">
                 <header className="topbar">
                     <button className={`mobile-menu ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(open => !open)} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen}><span className="hamburger-icon" aria-hidden="true"><span /><span /><span /></span></button>
-                                        <div><span className="topbar-kicker">Workspace / {activeCompany?.companyName || "No company assigned"}</span><h1>Dashboard</h1></div>
+                                        <div>{activeCompany ? <span className="topbar-kicker">Workspace / {activeCompany.companyName}</span> : <span className="topbar-kicker">Account overview</span>}<h1>{activeCompany ? "Dashboard" : `Welcome, ${firstName}`}</h1></div>
                     <div className="topbar-actions">
                         <button className="theme-toggle" onClick={() => setDarkMode(mode => !mode)} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={darkMode}><span className="theme-toggle-icon" aria-hidden="true">{darkMode ? "☀" : "◐"}</span><span>{darkMode ? "Light mode" : "Dark mode"}</span></button>
-                        <div className="account-controls"><div className="avatar">{String(user.userName || "U").slice(0, 1).toUpperCase()}</div><div className="account-copy"><strong>{user.userName}</strong><span>{user.email}</span></div><button onClick={handleLogout} className="logout-button">Log out</button></div>
+                        <div className="account-controls"><div className="avatar" title={`${user.userName || "Account"}${user.email ? ` - ${user.email}` : ""}`} aria-label={`${user.userName || "Account"}${user.email ? `, ${user.email}` : ""}`}>{String(user.userName || "U").slice(0, 1).toUpperCase()}</div><div className="account-copy"><strong>{user.userName}</strong><span>{user.email}</span></div><button onClick={handleLogout} className="logout-button">Log out</button></div>
                     </div>
                 </header>
                 <div className="content-grid" id="dashboard">
                     <section className={`welcome-panel welcome-panel-${dayPart}`}>
                         <video className="welcome-photo" src={workspaceWelcomeVideo} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
-                        <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : "Good evening"}, {firstName}.</h2><p>{dayPartCopy} Upload a report to turn raw statements into useful insight.</p><a className="welcome-action" href="#upload">Review your numbers <span aria-hidden="true">→</span></a></div>
+                        <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : "Good evening"}, {firstName}.</h2><p>{documents.length > 0 ? `${dayPartCopy} Your available reports are ready to review.` : canUploadActiveCompany ? `${dayPartCopy} You can upload your own PDF for analysis.` : companies.length > 0 ? `${dayPartCopy} Your assigned company reports will appear here when available.` : "Ask your administrator to assign a company workspace to view shared reports."}</p>{documents.length > 0 ? <a className="welcome-action" href="#analytics">View reports <span aria-hidden="true">→</span></a> : canUploadActiveCompany ? <a className="welcome-action" href="#upload">Upload a report <span aria-hidden="true">→</span></a> : companies.length > 0 ? <span className="welcome-action welcome-action-disabled">Waiting for reports</span> : <span className="welcome-action welcome-action-disabled">Contact your administrator</span>}</div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </section>
                     {documents.length > 0 && <section className="kpi-grid" aria-label="Workspace summary">
-                        <div className="kpi-card"><span className="kpi-label">Reports analyzed</span><strong>{documents.length}</strong><span className="kpi-foot">In this session</span></div>
-                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-ready" : uploading || analyticsBusy ? "status-processing" : "status-waiting"}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Balance sheet insights</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Reports available</span><strong>{documents.length}</strong><span className="kpi-foot">Available to your account</span></div>
+                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-ready" : uploading || analyticsBusy ? "status-processing" : "status-waiting"}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Financial insights</span></div>
                         <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={documents[0]?.original_filename}>{documents[0]?.original_filename || "--"}</strong><span className="kpi-foot">PDF document</span></div>
                     </section>}
                     <section className="upload-section" id="upload">
-                        <SectionHeader eyebrow={canUploadActiveCompany ? "Get started" : "Read only"} title={canUploadActiveCompany ? "Upload a financial report" : "Company documents are read-only"} description={canUploadActiveCompany ? "Drop a PDF here to unlock your balance sheet analytics." : "You can view this company's documents and analytics, but only an OWNER can upload reports."} />
+                        <SectionHeader eyebrow={canUploadActiveCompany ? "Get started" : activeCompany ? "Read only" : "Access required"} title={canUploadActiveCompany ? "Upload a financial report" : activeCompany ? "Company documents are read-only" : "Company access is required"} description={canUploadActiveCompany ? "Drop a PDF here to unlock your financial insights." : activeCompany ? "You can view this company's documents and analytics, but only an OWNER can upload reports." : "Contact your administrator to view shared company reports."} />
                         <div className={`upload-zone ${selectedFiles.length ? "has-file" : ""} ${!canUploadActiveCompany ? "is-read-only" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
                             <input id="file-upload" ref={fileInputRef} className="file-input" type="file" accept=".pdf,application/pdf" multiple onChange={handleFileChange} disabled={!canUploadActiveCompany || uploading} />
-                            {canUploadActiveCompany ? <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{selectedFiles.length ? "Add more PDF reports" : "Drop your reports here"}</strong><span>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "report" : "reports"} selected` : "or browse from your device"}</span><small>PDF files up to 25 MB each</small></label> : <div className="upload-zone-content"><span className="upload-icon" aria-hidden="true">✓</span><strong>View existing reports</strong><span>Upload is available to OWNER members</span><small>Documents and analytics remain available below</small></div>}
+                            {canUploadActiveCompany ? <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{selectedFiles.length ? "Add more PDF reports" : "Drop your reports here"}</strong><span>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "report" : "reports"} selected` : "or browse from your device"}</span><small>PDF files up to 25 MB each</small></label> : activeCompany ? <div className="upload-zone-content"><span className="upload-icon" aria-hidden="true">✓</span><strong>View existing reports</strong><span>Upload is available to OWNER members</span><small>Documents and analytics remain available below</small></div> : <div className="upload-zone-content"><span className="upload-icon" aria-hidden="true">i</span><strong>View-only account</strong><span>Reports and analytics will appear after an administrator assigns a company</span><small>Contact your administrator for access</small></div>}
                             {selectedFiles.length > 0 && <div className="selected-files selected-file-preview selected-files-in-zone" aria-label="Selected reports"><div className="selected-file-grid">{selectedFiles.map(({ file, name, size }) => { const identity = `${file.name}:${file.size}:${file.lastModified}`; return <div className="selected-file selected-file-card" key={identity} title={name}><span className="selected-file-icon" aria-hidden="true">PDF</span><strong title={name}>{name}</strong><small>{formatFileSize(size)}</small><button type="button" onClick={() => removeSelectedFile(identity)} disabled={uploading} aria-label={`Remove ${name}`} title={`Remove ${name}`}><span aria-hidden="true">−</span></button></div>; })}</div></div>}
                         </div>
                         {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">{uploadStatuses.some(status => status.status === "failed") ? "Upload results" : "Analyzing reports"}</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}

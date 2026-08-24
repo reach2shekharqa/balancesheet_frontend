@@ -46,7 +46,7 @@ function KeyMetrics1A({ historicalData = null, loading = false, error = false })
                             <tr key={row.metricName}>
                                 <th scope="row">{row.label}</th>
                                 {years.map(year => (
-                                    <td className={year === comparison.currentPeriod ? `is-current is-${comparison.state}` : undefined} key={year}>
+                                    <td className={year === comparison.currentPeriod ? `is-current is-${comparison.state}` : undefined} data-period={year} key={year}>
                                         <span>{formatHistoricalValue(row.values?.[year], row.unit)}</span>
                                         {year === comparison.currentPeriod && <span className="key-metrics-1a-comparison" aria-label={comparison.label} title={comparison.label}>{comparison.arrow} <small>{comparison.label}</small></span>}
                                         {year === comparison.currentPeriod && row.calculation && <button type="button" className="key-metrics-1a-details" onMouseEnter={() => setSelectedMetric(row)} onFocus={() => setSelectedMetric(row)} onClick={() => setSelectedMetric(row)} aria-label={`View calculation details for ${row.label}`}>Details</button>}
