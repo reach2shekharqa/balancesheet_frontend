@@ -18,7 +18,6 @@ import StatusMessage from "./components/StatusMessage";
 import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
 import { extractIdentityFromPdf } from "./utils/pdfIdentityPreflight";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
-import welcomeChartsImage from "./assets/welcome-charts.svg";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -1094,7 +1093,7 @@ function App() {
                 </header>
                 <div className="content-grid" id="dashboard">
                     <motion.section className={`welcome-panel welcome-panel-${dayPart}`} {...workspaceReveal} transition={workspaceTransition}>
-                        <img className="welcome-photo" src={welcomeChartsImage} alt="" aria-hidden="true" />
+                        <video className="welcome-photo" src="https://cdn.dribbble.com/userupload/15158653/file/original-6770ea165a041444c094cf60b32ccc80.mp4" autoPlay loop muted playsInline aria-hidden="true" onTimeUpdate={event => { if (event.currentTarget.currentTime >= 4) event.currentTarget.currentTime = 0; }} />
                         <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : "Good evening"}, {firstName}.</h2><p>{documents.length > 0 ? `${dayPartCopy} Your available reports are ready to review.` : canUploadActiveCompany ? `${dayPartCopy} You can upload your own PDF for analysis.` : companies.length > 0 ? `${dayPartCopy} Your assigned company reports will appear here when available.` : "Ask your administrator to assign a company workspace to view shared reports."}</p>{documents.length > 0 ? <a className="welcome-action" href="#analytics">View reports <span aria-hidden="true">→</span></a> : canUploadActiveCompany ? <a className="welcome-action" href="#upload">Upload a report <span aria-hidden="true">→</span></a> : companies.length > 0 ? <span className="welcome-action welcome-action-disabled">Waiting for reports</span> : <span className="welcome-action welcome-action-disabled">Contact your administrator</span>}</div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </motion.section>

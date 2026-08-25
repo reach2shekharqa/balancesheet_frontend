@@ -1548,7 +1548,7 @@ body { background: #f1f0eb; font-family: "Trebuchet MS", "Segoe UI", sans-serif;
 .workspace-app .welcome-panel { min-height: 202px; padding: 30px 34px; border: 0; border-radius: 8px; background: #dcebe3; box-shadow: none; }
 .workspace-app .welcome-panel::after { background: linear-gradient(90deg, rgba(220, 235, 227, .97), rgba(220, 235, 227, .72) 55%, rgba(220, 235, 227, .12)); }
 .workspace-app .welcome-panel::before { opacity: .16; }
-.workspace-app .welcome-photo { opacity: .70; mix-blend-mode: normal; filter: saturate(.82) contrast(.96); }
+.workspace-app .welcome-photo { opacity: .78; mix-blend-mode: normal; filter: saturate(.82) contrast(.96); }
 .workspace-app .welcome-panel h2 { font-size: clamp(28px, 3vw, 40px); }
 .workspace-app .welcome-panel p { max-width: 500px; line-height: 1.55; }
 .workspace-app .welcome-action { color: #a94c35; }
