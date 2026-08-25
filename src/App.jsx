@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import "./App.css";
 
 import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
@@ -158,16 +158,18 @@ function LandingPage({ onGetStarted, showEntryChooser }) {
                 <section className="nl-close"><div className="nl-shell nl-close-grid"><span className="nl-eyebrow">Ready when you are</span><h2>Bring the filing you have been putting off.</h2><p>One PDF, no card. You will know inside a minute whether the reading is useful.</p><button className="nl-btn nl-btn-lg nl-btn-inv" type="button" onClick={openEntryChooser}>Analyse a report <i aria-hidden="true">→</i></button></div></section>
             </main>
             <footer className="nl-foot"><div className="nl-shell nl-foot-inner"><span>₹ Financial Analyzer</span><a href="mailto:support@financialanalyzer.app">support@financialanalyzer.app</a><span>Figures shown are a sample, not a real filing.</span></div></footer>
-            {entryChooserOpen && <div className="entry-chooser-layer">
-                <button className="auth-dialog-backdrop" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)} />
-                <section className="entry-chooser" role="dialog" aria-modal="true" aria-labelledby="entry-chooser-title">
+            <AnimatePresence>
+                {entryChooserOpen && <motion.div className="entry-chooser-layer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                <motion.button className="auth-dialog-backdrop" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+                <motion.section className="entry-chooser" role="dialog" aria-modal="true" aria-labelledby="entry-chooser-title" initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.98 }} transition={{ type: "spring", stiffness: 280, damping: 24 }}>
                     <button className="auth-close" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)}>×</button>
                     <span className="eyebrow">Start with clarity</span>
                     <h2 id="entry-chooser-title">How will you use Financial Analyzer?</h2>
                     <p>Choose an option to continue. You can change this later by signing out.</p>
                     <AuthPathChooser standalone onSelect={selectEntryPath} />
-                </section>
-            </div>}
+                </motion.section>
+                </motion.div>}
+            </AnimatePresence>
         </div>
     );
 }
@@ -272,9 +274,9 @@ function AuthPathChooser({ authMode = "", registrationIntent = "owner", onSelect
         <div className="auth-path-grid">
             {paths.map(path => {
                 const selected = !standalone && path.mode === authMode && (path.mode === "login" || path.intent === registrationIntent);
-                return <button type="button" className={`auth-path-card auth-path-${path.id} ${selected ? "is-selected" : ""}`} key={path.id} onClick={() => onSelect(path.mode, path.intent)} aria-pressed={selected}>
+                return <motion.button type="button" className={`auth-path-card auth-path-${path.id} ${selected ? "is-selected" : ""}`} key={path.id} onClick={() => onSelect(path.mode, path.intent)} aria-pressed={selected} whileHover={{ y: -3 }} whileTap={{ scale: 0.985 }}>
                     <span className="auth-path-number">{path.number}</span><span className="auth-path-copy"><strong>{path.title}</strong><small>{path.description}</small></span><span className="auth-path-arrow" aria-hidden="true">→</span>
-                </button>;
+                </motion.button>;
             })}
         </div>
     </div>;
@@ -365,6 +367,7 @@ function App() {
     const [expandedCompanies, setExpandedCompanies] = useState({});
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(() => new Date());
+    const prefersReducedMotion = useReducedMotion();
     const currentDayPart = getDayPart(currentTime.getHours());
     const analyticsRequestRef = useRef(0);
     const googleButtonRef = useRef(null);
@@ -739,10 +742,11 @@ function App() {
             return (
                 <>
                     <LandingPage onGetStarted={openAuthFlow} showEntryChooser={entryChooserRequest} />
+                    <AnimatePresence initial={false}>
                     {authDialogOpen && (
-                        <div className="auth-dialog-layer">
-                            <button className="auth-dialog-backdrop" type="button" aria-label="Close registration dialog" onClick={() => !authSubmitting && setAuthDialogOpen(false)} />
-                            <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+                        <motion.div className="auth-dialog-layer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                            <motion.button className="auth-dialog-backdrop" type="button" aria-label="Close registration dialog" onClick={() => !authSubmitting && setAuthDialogOpen(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+                            <motion.section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title" initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.98 }} transition={{ type: "spring", stiffness: 280, damping: 24 }}>
                                 <div className="auth-dialog-aside">
                                     <span className="auth-dialog-kicker">Financial Analyzer</span>
                                     <div>
@@ -769,9 +773,10 @@ function App() {
                                     <StatusMessage message={authMessage} tone="error" />
                                     <div className="auth-switch"><span>{authMode === "login" ? "New to Financial Analyzer?" : "Already have an account?"}</span><button type="button" className="auth-switch-button" aria-label={authMode === "login" ? "New here? Create an account" : "Already have an account? Sign in"} disabled={authSubmitting} onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthMessage(""); }}>{authMode === "login" ? "Create an account" : "Sign in"}</button></div>
                                 </div>
-                            </section>
-                        </div>
+                            </motion.section>
+                        </motion.div>
                     )}
+                    </AnimatePresence>
                 </>
             );
         }
@@ -966,6 +971,7 @@ function App() {
             await loadQuota();
             setMessage("Balance sheet analytics loaded successfully.");
             setSelectedFiles([]);
+            setUploadStatuses([]);
             focusAnalytics();
         } catch (error) {
             console.error("Upload / analytics error:", error);
@@ -1053,6 +1059,11 @@ function App() {
         evening: "Close the day knowing what your numbers are saying.",
         night: "A clear financial view, whenever your next decision calls.",
     }[dayPart];
+    const workspaceReveal = prefersReducedMotion
+        ? { initial: false, animate: { opacity: 1, y: 0 } }
+        : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } };
+    const workspaceTransition = { duration: 0.45, ease: [0.22, 1, 0.36, 1] };
+    const workspaceStagger = { animate: { transition: { staggerChildren: prefersReducedMotion ? 0 : 0.08 } } };
 
     return (
         <div className={`app workspace-app ${darkMode ? "theme-dark" : ""}`}>
@@ -1062,9 +1073,9 @@ function App() {
                 <div className="brand-lockup"><span className="brand-mark">₹</span><strong>Financial<br />Analyzer</strong></div>
                 <div className="sidebar-label">Workspace</div>
                 <nav className="main-nav" aria-label="Main navigation">
-                    <a className={`nav-item ${activeSection === "#dashboard" ? "is-active" : ""}`} href="#dashboard" aria-current={activeSection === "#dashboard" ? "page" : undefined}><NavIcon>+</NavIcon>Dashboard</a>
-                    <a className="nav-item" href="#upload"><NavIcon>[]</NavIcon>Upload a financial report</a>
-                    <a className={`nav-item ${activeSection === "#analytics" ? "is-active" : ""}`} href="#analytics" aria-current={activeSection === "#analytics" ? "page" : undefined}><NavIcon>~</NavIcon>Analytics</a>
+                    <a className={`nav-item ${activeSection === "#dashboard" ? "is-active" : ""}`} href="#dashboard" aria-current={activeSection === "#dashboard" ? "page" : undefined}><NavIcon>+</NavIcon>Dashboard{activeSection === "#dashboard" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
+                    <a className={`nav-item ${activeSection === "#upload" ? "is-active" : ""}`} href="#upload" aria-current={activeSection === "#upload" ? "page" : undefined}><NavIcon>[]</NavIcon>Upload a financial report{activeSection === "#upload" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
+                    <a className={`nav-item ${activeSection === "#analytics" ? "is-active" : ""}`} href="#analytics" aria-current={activeSection === "#analytics" ? "page" : undefined}><NavIcon>~</NavIcon>Analytics{activeSection === "#analytics" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
                     <button id="documents" className={`nav-item nav-button report-history-toggle ${reportHistoryOpen ? "is-open" : ""}`} onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen} aria-controls="sidebar-report-history"><NavIcon>{reportHistoryOpen ? "-" : "+"}</NavIcon>Report history<span className="nav-chevron" aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>
                     {reportHistoryOpen && <div className="sidebar-report-history" id="sidebar-report-history"><div className="history-heading"><div><span className="eyebrow">Report history</span><h3>Reports</h3></div><span className="history-count">{documents.length}</span></div>{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p><a href="#upload">Upload PDF</a></div> : <><button className={`report-selector ${reportMenuOpen ? "is-open" : ""}`} onClick={() => setReportMenuOpen(open => !open)} aria-expanded={reportMenuOpen} disabled={documentsLoading}><span>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Select report"}</span><span aria-hidden="true">⌄</span></button>{reportMenuOpen && <div className="report-menu"><span className="report-menu-label">Select report</span>{documents.map((document, index) => <button className={`report-option ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { setReportMenuOpen(false); handleDocumentSelect(document.id); }}><span>{document.id === activeDocumentId ? "✓" : ""}</span><span className="report-option-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}{document.extraction_status ? ` · ${document.extraction_status}` : ""}</small></span>{index === 0 && <em>Latest</em>}</button>)}</div>}<div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => handleDocumentSelect(document.id)}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div></>}</div>}
                                     <CompanyAccessSection companies={companies} activeCompanyId={activeCompany?.companyId} expanded={companiesOpen} onToggle={() => setCompaniesOpen(open => !open)} expandedCompanies={expandedCompanies} onSelectCompany={handleCompanySelect} onToggleCompany={companyId => setExpandedCompanies(current => ({ ...current, [companyId]: !current[companyId] }))} />
@@ -1081,25 +1092,27 @@ function App() {
                     </div>
                 </header>
                 <div className="content-grid" id="dashboard">
-                    <section className={`welcome-panel welcome-panel-${dayPart}`}>
+                    <motion.section className={`welcome-panel welcome-panel-${dayPart}`} {...workspaceReveal} transition={workspaceTransition}>
                         <video className="welcome-photo" src={workspaceWelcomeVideo} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
                         <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : "Good evening"}, {firstName}.</h2><p>{documents.length > 0 ? `${dayPartCopy} Your available reports are ready to review.` : canUploadActiveCompany ? `${dayPartCopy} You can upload your own PDF for analysis.` : companies.length > 0 ? `${dayPartCopy} Your assigned company reports will appear here when available.` : "Ask your administrator to assign a company workspace to view shared reports."}</p>{documents.length > 0 ? <a className="welcome-action" href="#analytics">View reports <span aria-hidden="true">→</span></a> : canUploadActiveCompany ? <a className="welcome-action" href="#upload">Upload a report <span aria-hidden="true">→</span></a> : companies.length > 0 ? <span className="welcome-action welcome-action-disabled">Waiting for reports</span> : <span className="welcome-action welcome-action-disabled">Contact your administrator</span>}</div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
-                    </section>
-                    {documents.length > 0 && <section className="kpi-grid" aria-label="Workspace summary">
-                        <div className="kpi-card"><span className="kpi-label">Reports available</span><strong>{documents.length}</strong><span className="kpi-foot">Available to your account</span></div>
-                        <div className="kpi-card"><span className="kpi-label">Analytics status</span><strong className={analyticsReady ? "status-ready" : uploading || analyticsBusy ? "status-processing" : "status-waiting"}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</strong><span className="kpi-foot">Financial insights</span></div>
-                        <div className="kpi-card"><span className="kpi-label">Latest report</span><strong title={documents[0]?.original_filename}>{documents[0]?.original_filename || "--"}</strong><span className="kpi-foot">PDF document</span></div>
-                    </section>}
-                    <section className="upload-section" id="upload">
+                    </motion.section>
+                    {documents.length > 0 && <motion.section className="kpi-grid" aria-label="Workspace summary" variants={workspaceStagger} initial={workspaceReveal.initial} animate={workspaceReveal.animate}>
+                        <motion.div className="kpi-card" variants={workspaceReveal} transition={workspaceTransition}><span className="kpi-label">Reports available</span><motion.strong key={documents.length} initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>{documents.length}</motion.strong><span className="kpi-foot">Available to your account</span></motion.div>
+                        <motion.div className="kpi-card" variants={workspaceReveal} transition={workspaceTransition}><span className="kpi-label">Analytics status</span><motion.strong key={analyticsReady ? "ready" : uploading || analyticsBusy ? "processing" : "waiting"} className={analyticsReady ? "status-ready" : uploading || analyticsBusy ? "status-processing" : "status-waiting"} initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>{analyticsReady ? "Ready" : uploading || analyticsBusy ? "Processing" : "Waiting"}</motion.strong><span className="kpi-foot">Financial insights</span></motion.div>
+                        <motion.div className="kpi-card" variants={workspaceReveal} transition={workspaceTransition}><span className="kpi-label">Latest report</span><motion.strong key={documents[0]?.original_filename || "--"} title={documents[0]?.original_filename} initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>{documents[0]?.original_filename || "--"}</motion.strong><span className="kpi-foot">PDF document</span></motion.div>
+                    </motion.section>}
+                    <motion.section key={`upload-${activeSection === "#upload"}`} className="upload-section" id="upload" {...workspaceReveal} transition={{ ...workspaceTransition, delay: 0.08 }}>
                         <SectionHeader eyebrow={canUploadActiveCompany ? "Get started" : activeCompany ? "Read only" : "Access required"} title={canUploadActiveCompany ? "Upload a financial report" : activeCompany ? "Company documents are read-only" : "Company access is required"} description={canUploadActiveCompany ? "Drop a PDF here to unlock your financial insights." : activeCompany ? "You can view this company's documents and analytics, but only an OWNER can upload reports." : "Contact your administrator to view shared company reports."} />
                         <div className={`upload-zone ${selectedFiles.length ? "has-file" : ""} ${!canUploadActiveCompany ? "is-read-only" : ""}`} onDragOver={event => event.preventDefault()} onDrop={handleDrop}>
                             <input id="file-upload" ref={fileInputRef} className="file-input" type="file" accept=".pdf,application/pdf" multiple onChange={handleFileChange} disabled={!canUploadActiveCompany || uploading} />
                             {canUploadActiveCompany ? <label htmlFor="file-upload" className="upload-zone-content"><span className="upload-icon">↑</span><strong>{selectedFiles.length ? "Add more PDF reports" : "Drop your reports here"}</strong><span>{selectedFiles.length ? `${selectedFiles.length} ${selectedFiles.length === 1 ? "report" : "reports"} selected` : "or browse from your device"}</span><small>PDF files up to 25 MB each</small></label> : activeCompany ? <div className="upload-zone-content"><span className="upload-icon" aria-hidden="true">✓</span><strong>View existing reports</strong><span>Upload is available to OWNER members</span><small>Documents and analytics remain available below</small></div> : <div className="upload-zone-content"><span className="upload-icon" aria-hidden="true">i</span><strong>View-only account</strong><span>Reports and analytics will appear after an administrator assigns a company</span><small>Contact your administrator for access</small></div>}
                             {selectedFiles.length > 0 && <div className="selected-files selected-file-preview selected-files-in-zone" aria-label="Selected reports"><div className="selected-file-grid">{selectedFiles.map(({ file, name, size }) => { const identity = `${file.name}:${file.size}:${file.lastModified}`; return <div className="selected-file selected-file-card" key={identity} title={name}><span className="selected-file-icon" aria-hidden="true">PDF</span><strong title={name}>{name}</strong><small>{formatFileSize(size)}</small><button type="button" onClick={() => removeSelectedFile(identity)} disabled={uploading} aria-label={`Remove ${name}`} title={`Remove ${name}`}><span aria-hidden="true">−</span></button></div>; })}</div></div>}
                         </div>
-                        {uploadStatuses.length > 0 && <div className="selected-files" aria-label="Upload progress"><div className="selected-files-heading">{uploadStatuses.some(status => status.status === "failed") ? "Upload results" : "Analyzing reports"}</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <div className="selected-file" key={`${name}-${index}`}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></div>)}</div>}
-                        {(identityState.status !== "idle" && !(identityState.status === "verified" && selectedFiles.length === 1)) && <div className={`identity-status identity-status-${identityState.status}`} aria-live="polite">{identityState.status === "verified" && selectedFiles.length > 1 ? <><strong>Reports verified</strong><span>Same company · CIN matched</span></> : identityState.status === "conflict" ? <><strong>Reports don't belong to the same company</strong><span>{identityState.error}</span></> : identityState.status === "incomplete" || identityState.status === "error" ? <><strong>Company identity could not be verified</strong><span>{identityState.error}</span></> : identityState.status === "checking" ? <span>Checking report identity...</span> : null}</div>}
+                        <AnimatePresence initial={false} mode="popLayout">
+                            {uploadStatuses.length > 0 && <motion.div className="selected-files" aria-label="Upload progress" initial={{ opacity: 0, height: 0, y: -8 }} animate={{ opacity: 1, height: "auto", y: 0 }} exit={{ opacity: 0, height: 0, y: -8 }} transition={workspaceTransition}><div className="selected-files-heading">{uploadStatuses.some(status => status.status === "failed") ? "Upload results" : "Analyzing reports"}</div>{uploadStatuses.map(({ name, status, fromCache, error }, index) => <motion.div className="selected-file" layout key={`${name}-${index}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -12 }} transition={workspaceTransition}><span><strong>{name}</strong><small>{fromCache ? "Reused existing document" : status === "processing" ? "Processing" : error || status}</small></span></motion.div>)}</motion.div>}
+                            {(identityState.status !== "idle" && !(identityState.status === "verified" && selectedFiles.length === 1)) && <motion.div className={`identity-status identity-status-${identityState.status}`} aria-live="polite" initial={{ opacity: 0, height: 0, y: -8 }} animate={{ opacity: 1, height: "auto", y: 0 }} exit={{ opacity: 0, height: 0, y: -8 }} transition={workspaceTransition}>{identityState.status === "verified" && selectedFiles.length > 1 ? <><strong>Reports verified</strong><span>Same company · CIN matched</span></> : identityState.status === "conflict" ? <><strong>Reports don't belong to the same company</strong><span>{identityState.error}</span></> : identityState.status === "incomplete" || identityState.status === "error" ? <><strong>Company identity could not be verified</strong><span>{identityState.error}</span></> : identityState.status === "checking" ? <span>Checking report identity...</span> : null}</motion.div>}
+                        </AnimatePresence>
                                         <div className="upload-actions"><button className="primary-button upload-button" onClick={handleUpload} disabled={!canUploadActiveCompany || !canAnalyzeFiles(selectedFiles, uploading, identityState)}>{uploading ? <LoadingIndicator label="Processing reports..." /> : "Analyze report"}</button>{selectedFiles.length > 0 && !uploading && !uploadStatuses.some(status => status.status === "failed") && <span className="file-status"><span className="status-dot" /> {canAnalyzeFiles(selectedFiles, uploading, identityState) ? "Ready to analyze" : "Identity verification required"}</span>}</div>
                         <StatusMessage
                             message={message}
@@ -1112,8 +1125,8 @@ function App() {
                                 "Building your financial insights...",
                             ]}
                         />
-                    </section>
-                    {documents.length > 0 && <section className="insights-section" id="analytics" tabIndex="-1">
+                    </motion.section>
+                    {documents.length > 0 && <motion.section key={`analytics-${activeSection === "#analytics"}`} className="insights-section" id="analytics" tabIndex="-1" {...workspaceReveal} transition={{ ...workspaceTransition, delay: 0.12 }}>
                         <div className="insights-heading-row">
                             <SectionHeader eyebrow="Financial intelligence" title="Explore your report" description="Switch between financial position and profitability without leaving the workspace." />
                             <div className="insight-mode-switcher" style={{ "--analytics-tab-count": visibleAnalyticsTabs.length }} role="tablist" aria-label="Financial intelligence views">
@@ -1126,6 +1139,14 @@ function App() {
                         </div>
                         <div className="insights-workspace" id="insights-content">
                             <div className="insight-workspace-main">
+                                <AnimatePresence mode="wait" initial={false}>
+                                    <motion.div
+                                        key={`${activeAnalyticsTab}-${activeChart}`}
+                                        initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={prefersReducedMotion ? undefined : { opacity: 0, y: -10 }}
+                                        transition={workspaceTransition}
+                                    >
                                 {activeAnalyticsTab === "balanceSheet1A" ? (
                                     <BalanceSheet1A assets={analyticsData.assets} liabilities={analyticsData.liabilities} loading={analyticsLoading.assets || analyticsLoading.liabilities} />
                                 ) : activeAnalyticsTab === "profitLoss1A" ? (
@@ -1158,9 +1179,11 @@ function App() {
                                         <section className="chart-panel chart-panel-featured">{activeChart === "comparison" ? analyticsLoading.assets ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <AssetsComparisonChart analyticsData={analyticsData.assets} /> : activeChart === "breakdown" ? analyticsLoading.assets ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <AssetsBreakdownChart analyticsData={analyticsData.assets} /> : analyticsLoading.liabilities ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <LiabilitiesBreakdownChart analyticsData={analyticsData.liabilities} />}</section>
                                     </> : <div className="insights-skeleton"><LoadingIndicator label={documentsLoading ? "Loading reports..." : "Loading insights..."} /><span /></div>
                                 )}
+                                    </motion.div>
+                                </AnimatePresence>
                             </div>
                         </div>
-                    </section>}
+                    </motion.section>}
                 </div>
                 {contactOpen && <div className="contact-backdrop" onClick={() => setContactOpen(false)} aria-hidden="true" />}
                 {contactOpen && <section className="contact-dialog" role="dialog" aria-modal="true" aria-labelledby="contact-title">
