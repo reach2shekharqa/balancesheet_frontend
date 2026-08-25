@@ -370,6 +370,8 @@ function App() {
     const prefersReducedMotion = useReducedMotion();
     const currentDayPart = getDayPart(currentTime.getHours());
     const analyticsRequestRef = useRef(0);
+    const authSessionVersionRef = useRef(0);
+    const logoutInFlightRef = useRef(false);
     const googleButtonRef = useRef(null);
     const fileInputRef = useRef(null);
     const googleInitializedRef = useRef(false);
@@ -445,13 +447,16 @@ function App() {
     }, [darkMode]);
 
     useEffect(() => {
+        const sessionVersion = authSessionVersionRef.current;
         requestJson("/auth/me")
             .then(result => {
+                if (sessionVersion !== authSessionVersionRef.current) return;
                 setAuthError("");
                 setDocumentsLoading(true);
                 setUser(result.user);
             })
             .catch(error => {
+                if (sessionVersion !== authSessionVersionRef.current) return;
                 if (error.status === 401) {
                     setUser(null);
                     return;
@@ -467,8 +472,10 @@ function App() {
 
         const refreshUser = async () => {
             if (document.visibilityState === "hidden") return;
+            const sessionVersion = authSessionVersionRef.current;
             try {
                 const result = await requestJson("/auth/me");
+                if (sessionVersion !== authSessionVersionRef.current) return;
                 setUser(result.user);
             } catch {
                 return;
@@ -642,7 +649,9 @@ function App() {
     }, [authDialogOpen, authSubmitting]);
 
     async function handleLogout() {
-        await requestJson("/auth/logout", { method: "POST" });
+        if (logoutInFlightRef.current) return;
+        logoutInFlightRef.current = true;
+        authSessionVersionRef.current += 1;
         setUser(null);
         setLandingView("landing");
         setAuthDialogOpen(false);
@@ -655,6 +664,13 @@ function App() {
         setActiveDocumentId(null);
         setAnalyticsData({ assets: null, liabilities: null, profitLoss: null });
         setActiveCompany(null);
+        try {
+            await requestJson("/auth/logout", { method: "POST" });
+        } catch {
+            return;
+        } finally {
+            logoutInFlightRef.current = false;
+        }
     }
 
     const handleGoogleLogin = useCallback(async credential => {
