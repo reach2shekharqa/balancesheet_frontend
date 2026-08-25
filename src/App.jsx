@@ -18,6 +18,7 @@ import StatusMessage from "./components/StatusMessage";
 import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
 import { extractIdentityFromPdf } from "./utils/pdfIdentityPreflight";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
+import welcomeChartsImage from "./assets/welcome-charts.svg";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -83,7 +84,6 @@ function getDayPart(hour) {
     return "night";
 }
 
-const workspaceWelcomeVideo = "https://cdn.dribbble.com/userupload/15158652/file/original-d1a0d5fa39a82f7bbe884e1d1e3bef36.mp4";
 const landingDemoStages = [
     { label: "Checking report identity", detail: "CIN matched to workspace", progress: 28, metric: "1 / 3" },
     { label: "Extracting statements", detail: "18 line items found", progress: 64, metric: "2 / 3" },
@@ -131,7 +131,7 @@ function LandingPage({ onGetStarted, showEntryChooser }) {
             <header className="nl-masthead">
                 <motion.div className="nl-scroll-progress" style={{ scaleX: scrollYProgress }} />
                 <div className="nl-shell nl-mast-inner">
-                    <div className="nl-brand"><span className="nl-brand-mark">₹</span><span className="nl-brand-name">Financial Analyzer</span></div>
+                    <div className="nl-brand"><span className="nl-brand-mark" aria-hidden="true">₹</span><span className="nl-brand-name">Financial Analyzer</span></div>
                     <nav className="nl-nav" aria-label="Sections"><a href="#reading">How it reads</a><a href="#findings">Findings</a><a href="#plans">Plans</a></nav>
                     <motion.button className="nl-btn" type="button" onClick={openEntryChooser} whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}>Analyse a report <i aria-hidden="true">→</i></motion.button>
                 </div>
@@ -162,7 +162,7 @@ function LandingPage({ onGetStarted, showEntryChooser }) {
                 {entryChooserOpen && <motion.div className="entry-chooser-layer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                 <motion.button className="auth-dialog-backdrop" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
                 <motion.section className="entry-chooser" role="dialog" aria-modal="true" aria-labelledby="entry-chooser-title" initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.98 }} transition={{ type: "spring", stiffness: 280, damping: 24 }}>
-                    <button className="auth-close" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)}>×</button>
+                    <button className="auth-close" type="button" aria-label="Close start options" title="Close start options" onClick={() => setEntryChooserOpen(false)}>×</button>
                     <span className="eyebrow">Start with clarity</span>
                     <h2 id="entry-chooser-title">How will you use Financial Analyzer?</h2>
                     <p>Choose an option to continue. You can change this later by signing out.</p>
@@ -186,7 +186,7 @@ function NavIcon({ children }) {
 
 function CompanyAccessSection({ companies, activeCompanyId, expanded, onToggle, expandedCompanies, onSelectCompany, onToggleCompany, idPrefix = "sidebar" }) {
     return <div className="sidebar-companies">
-        <button className={`nav-item nav-button companies-toggle ${expanded ? "is-open" : ""}`} onClick={onToggle} aria-expanded={expanded} aria-controls="sidebar-companies-list">
+        <button className={`nav-item nav-button companies-toggle ${expanded ? "is-open" : ""}`} onClick={onToggle} title="Companies" aria-expanded={expanded} aria-controls="sidebar-companies-list">
             <NavIcon>+</NavIcon>
             Companies
             <span className="nav-chevron" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
@@ -233,7 +233,7 @@ function UpgradeModal({ quota, onClose, onContact, onCheckout, checkoutLoading, 
         <>
             <div className="quota-modal-backdrop" onClick={onClose} aria-hidden="true" />
             <section className="quota-modal" role="dialog" aria-modal="true" aria-labelledby="quota-modal-title">
-                <button className="contact-close" onClick={onClose} aria-label="Close upgrade dialog">×</button>
+                <button className="contact-close" onClick={onClose} aria-label="Close upgrade dialog" title="Close upgrade dialog">×</button>
                 <span className="quota-modal-mark" aria-hidden="true">↑</span>
                 <span className="eyebrow">{isTopPlan ? "Workspace capacity" : "Plan upgrade"}</span>
                 <h2 id="quota-modal-title">{isTopPlan ? "Upload limit reached" : quota?.plan === "FREE" ? "Upload limit reached" : "You've reached your limit"}</h2>
@@ -366,6 +366,7 @@ function App() {
     const [companiesOpen, setCompaniesOpen] = useState(false);
     const [expandedCompanies, setExpandedCompanies] = useState({});
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [currentTime, setCurrentTime] = useState(() => new Date());
     const prefersReducedMotion = useReducedMotion();
     const currentDayPart = getDayPart(currentTime.getHours());
@@ -757,7 +758,7 @@ function App() {
                                     <div className="auth-dialog-proof"><span className="signal-dot" /> Secure workspace for your financial reports</div>
                                 </div>
                                 <div className="auth-dialog-content">
-                                    <button className="auth-close" type="button" aria-label="Close registration dialog" disabled={authSubmitting} onClick={() => setAuthDialogOpen(false)}>×</button>
+                                    <button className="auth-close" type="button" aria-label="Close registration dialog" title="Close registration dialog" disabled={authSubmitting} onClick={() => setAuthDialogOpen(false)}>×</button>
                                     <span className="eyebrow">{authMode === "login" ? "Welcome back" : "Create a workspace"}</span>
                                     <h2 id="auth-dialog-title">{authMode === "login" ? "Sign in to your workspace" : "Create your account"}</h2>
                                     <p className="auth-dialog-intro">{authMode === "login" ? "Access your financial analysis dashboard." : "Set up your workspace in less than a minute."}</p>
@@ -784,7 +785,7 @@ function App() {
         return (
             <div className="app auth-app">
                 <div className="auth-visual">
-                    <div className="brand-lockup"><span className="brand-mark">₹</span><strong>Financial Analyzer</strong></div>
+                    <div className="brand-lockup"><span className="brand-mark" aria-hidden="true">₹</span><strong>Financial Analyzer</strong></div>
                     <div className="auth-visual-copy"><span className="eyebrow">Financial intelligence</span><h1>Clarity for every number.</h1><p>Turn financial reports into decisions with a focused workspace for analysis.</p></div>
                     <div className="auth-signal"><span className="signal-dot" /> Secure document analysis</div>
                 </div>
@@ -1066,17 +1067,17 @@ function App() {
     const workspaceStagger = { animate: { transition: { staggerChildren: prefersReducedMotion ? 0 : 0.08 } } };
 
     return (
-        <div className={`app workspace-app ${darkMode ? "theme-dark" : ""}`}>
+        <div className={`app workspace-app ${darkMode ? "theme-dark" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
             {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
-            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation"><span className="close-icon" aria-hidden="true"><span /><span /></span></button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#upload" onClick={() => setMobileNavOpen(false)}>Upload a financial report</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}<CompanyAccessSection companies={companies} activeCompanyId={activeCompany?.companyId} expanded={companiesOpen} onToggle={() => setCompaniesOpen(open => !open)} expandedCompanies={expandedCompanies} onSelectCompany={companyId => { handleCompanySelect(companyId); setMobileNavOpen(false); }} onToggleCompany={companyId => setExpandedCompanies(current => ({ ...current, [companyId]: !current[companyId] }))} idPrefix="mobile" /><button className="mobile-logout" onClick={() => { setMobileNavOpen(false); handleLogout(); }}>Log out</button></nav>}
+            {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" title="Close navigation"><span className="close-icon" aria-hidden="true"><span /><span /></span></button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#upload" onClick={() => setMobileNavOpen(false)}>Upload a financial report</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}<CompanyAccessSection companies={companies} activeCompanyId={activeCompany?.companyId} expanded={companiesOpen} onToggle={() => setCompaniesOpen(open => !open)} expandedCompanies={expandedCompanies} onSelectCompany={companyId => { handleCompanySelect(companyId); setMobileNavOpen(false); }} onToggleCompany={companyId => setExpandedCompanies(current => ({ ...current, [companyId]: !current[companyId] }))} idPrefix="mobile" /><button className="mobile-logout" onClick={() => { setMobileNavOpen(false); handleLogout(); }}>Log out</button></nav>}
             <aside className="sidebar">
-                <div className="brand-lockup"><span className="brand-mark">₹</span><strong>Financial<br />Analyzer</strong></div>
+                <div className="brand-lockup"><span className="brand-mark" aria-hidden="true">₹</span><strong>Financial<br />Analyzer</strong><button className="sidebar-view-toggle" type="button" onClick={() => setSidebarCollapsed(collapsed => !collapsed)} aria-label={sidebarCollapsed ? "Expand sidebar" : "Switch to full view"} title={sidebarCollapsed ? "Expand sidebar" : "Switch to full view"} aria-pressed={sidebarCollapsed}><span className="sidebar-view-toggle-icon" aria-hidden="true">{sidebarCollapsed ? ">" : "<"}</span></button></div>
                 <div className="sidebar-label">Workspace</div>
                 <nav className="main-nav" aria-label="Main navigation">
-                    <a className={`nav-item ${activeSection === "#dashboard" ? "is-active" : ""}`} href="#dashboard" aria-current={activeSection === "#dashboard" ? "page" : undefined}><NavIcon>+</NavIcon>Dashboard{activeSection === "#dashboard" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
-                    <a className={`nav-item ${activeSection === "#upload" ? "is-active" : ""}`} href="#upload" aria-current={activeSection === "#upload" ? "page" : undefined}><NavIcon>[]</NavIcon>Upload a financial report{activeSection === "#upload" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
-                    <a className={`nav-item ${activeSection === "#analytics" ? "is-active" : ""}`} href="#analytics" aria-current={activeSection === "#analytics" ? "page" : undefined}><NavIcon>~</NavIcon>Analytics{activeSection === "#analytics" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
-                    <button id="documents" className={`nav-item nav-button report-history-toggle ${reportHistoryOpen ? "is-open" : ""}`} onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen} aria-controls="sidebar-report-history"><NavIcon>{reportHistoryOpen ? "-" : "+"}</NavIcon>Report history<span className="nav-chevron" aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>
+                    <a className={`nav-item ${activeSection === "#dashboard" ? "is-active" : ""}`} href="#dashboard" title="Dashboard" aria-current={activeSection === "#dashboard" ? "page" : undefined}><NavIcon>+</NavIcon>Dashboard{activeSection === "#dashboard" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
+                    <a className={`nav-item ${activeSection === "#upload" ? "is-active" : ""}`} href="#upload" title="Upload a financial report" aria-current={activeSection === "#upload" ? "page" : undefined}><NavIcon>[]</NavIcon>Upload a financial report{activeSection === "#upload" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
+                    <a className={`nav-item ${activeSection === "#analytics" ? "is-active" : ""}`} href="#analytics" title="Analytics" aria-current={activeSection === "#analytics" ? "page" : undefined}><NavIcon>~</NavIcon>Analytics{activeSection === "#analytics" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
+                    <button id="documents" className={`nav-item nav-button report-history-toggle ${reportHistoryOpen ? "is-open" : ""}`} onClick={() => setReportHistoryOpen(open => !open)} title="Report history" aria-expanded={reportHistoryOpen} aria-controls="sidebar-report-history"><NavIcon>{reportHistoryOpen ? "-" : "+"}</NavIcon>Report history<span className="nav-chevron" aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>
                     {reportHistoryOpen && <div className="sidebar-report-history" id="sidebar-report-history"><div className="history-heading"><div><span className="eyebrow">Report history</span><h3>Reports</h3></div><span className="history-count">{documents.length}</span></div>{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p><a href="#upload">Upload PDF</a></div> : <><button className={`report-selector ${reportMenuOpen ? "is-open" : ""}`} onClick={() => setReportMenuOpen(open => !open)} aria-expanded={reportMenuOpen} disabled={documentsLoading}><span>{documents.find(document => document.id === activeDocumentId)?.original_filename || "Select report"}</span><span aria-hidden="true">⌄</span></button>{reportMenuOpen && <div className="report-menu"><span className="report-menu-label">Select report</span>{documents.map((document, index) => <button className={`report-option ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { setReportMenuOpen(false); handleDocumentSelect(document.id); }}><span>{document.id === activeDocumentId ? "✓" : ""}</span><span className="report-option-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}{document.extraction_status ? ` · ${document.extraction_status}` : ""}</small></span>{index === 0 && <em>Latest</em>}</button>)}</div>}<div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => handleDocumentSelect(document.id)}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div></>}</div>}
                                     <CompanyAccessSection companies={companies} activeCompanyId={activeCompany?.companyId} expanded={companiesOpen} onToggle={() => setCompaniesOpen(open => !open)} expandedCompanies={expandedCompanies} onSelectCompany={handleCompanySelect} onToggleCompany={companyId => setExpandedCompanies(current => ({ ...current, [companyId]: !current[companyId] }))} />
                 </nav>
@@ -1084,7 +1085,7 @@ function App() {
             </aside>
             <main className="workspace-main">
                 <header className="topbar">
-                    <button className={`mobile-menu ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(open => !open)} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen}><span className="hamburger-icon" aria-hidden="true"><span /><span /><span /></span></button>
+                    <button className={`mobile-menu ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(open => !open)} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} title={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen}><span className="hamburger-icon" aria-hidden="true"><span /><span /><span /></span></button>
                                         <div>{activeCompany ? <span className="topbar-kicker">Workspace / {activeCompany.companyName}</span> : <span className="topbar-kicker">Account overview</span>}<h1>{activeCompany ? "Dashboard" : `Welcome, ${firstName}`}</h1></div>
                     <div className="topbar-actions">
                         <button className="theme-toggle" onClick={() => setDarkMode(mode => !mode)} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={darkMode}><span className="theme-toggle-icon" aria-hidden="true">{darkMode ? "☀" : "◐"}</span><span>{darkMode ? "Light mode" : "Dark mode"}</span></button>
@@ -1093,7 +1094,7 @@ function App() {
                 </header>
                 <div className="content-grid" id="dashboard">
                     <motion.section className={`welcome-panel welcome-panel-${dayPart}`} {...workspaceReveal} transition={workspaceTransition}>
-                        <video className="welcome-photo" src={workspaceWelcomeVideo} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
+                        <img className="welcome-photo" src={welcomeChartsImage} alt="" aria-hidden="true" />
                         <div className="welcome-copy"><div className="welcome-meta"><span className="eyebrow">{dayPart === "night" ? "After-hours financial intelligence" : "Your financial intelligence desk"}</span></div><h2>{dayPart === "morning" ? "Good morning" : dayPart === "afternoon" ? "Good afternoon" : "Good evening"}, {firstName}.</h2><p>{documents.length > 0 ? `${dayPartCopy} Your available reports are ready to review.` : canUploadActiveCompany ? `${dayPartCopy} You can upload your own PDF for analysis.` : companies.length > 0 ? `${dayPartCopy} Your assigned company reports will appear here when available.` : "Ask your administrator to assign a company workspace to view shared reports."}</p>{documents.length > 0 ? <a className="welcome-action" href="#analytics">View reports <span aria-hidden="true">→</span></a> : canUploadActiveCompany ? <a className="welcome-action" href="#upload">Upload a report <span aria-hidden="true">→</span></a> : companies.length > 0 ? <span className="welcome-action welcome-action-disabled">Waiting for reports</span> : <span className="welcome-action welcome-action-disabled">Contact your administrator</span>}</div>
                         <div className="welcome-mark" aria-hidden="true"><span>+12.8%</span><i /></div>
                     </motion.section>
@@ -1148,7 +1149,7 @@ function App() {
                                         transition={workspaceTransition}
                                     >
                                 {activeAnalyticsTab === "balanceSheet1A" ? (
-                                    <BalanceSheet1A assets={analyticsData.assets} liabilities={analyticsData.liabilities} loading={analyticsLoading.assets || analyticsLoading.liabilities} />
+                                    <BalanceSheet1A assets={analyticsData.assets} liabilities={analyticsData.liabilities} profitLoss={analyticsData.profitLoss} keyMetrics={keyMetrics} loading={analyticsLoading.assets || analyticsLoading.liabilities} />
                                 ) : activeAnalyticsTab === "profitLoss1A" ? (
                                     <ProfitLoss1A analyticsData={analyticsData.profitLoss} loading={analyticsLoading.profitLoss} />
                                 ) : activeAnalyticsTab === "keyMetrics1A" ? (
@@ -1187,7 +1188,7 @@ function App() {
                 </div>
                 {contactOpen && <div className="contact-backdrop" onClick={() => setContactOpen(false)} aria-hidden="true" />}
                 {contactOpen && <section className="contact-dialog" role="dialog" aria-modal="true" aria-labelledby="contact-title">
-                    <div className="contact-dialog-head"><div><span className="eyebrow">Support</span><h2 id="contact-title">Contact Financial Analyzer</h2></div><button className="contact-close" onClick={() => setContactOpen(false)} aria-label="Close contact dialog">×</button></div>
+                    <div className="contact-dialog-head"><div><span className="eyebrow">Support</span><h2 id="contact-title">Contact Financial Analyzer</h2></div><button className="contact-close" onClick={() => setContactOpen(false)} aria-label="Close contact dialog" title="Close contact dialog">×</button></div>
                     {contactSent ? <div className="contact-success"><strong>Your message is ready for the workspace team.</strong><p>We will review your request and follow up through the email you provided.</p><button className="primary-button" onClick={() => { setContactSent(false); setContactOpen(false); }}>Done</button></div> : <form className="contact-form" onSubmit={event => { event.preventDefault(); setContactSent(true); }}>
                         <label>Subject<input name="subject" type="text" placeholder="How can we help?" required /></label>
                         <label>Email<input name="email" type="email" defaultValue={user.email || ""} placeholder="you@example.com" required /></label>
@@ -1198,7 +1199,7 @@ function App() {
                 {quotaModalOpen && <UpgradeModal quota={quota} onClose={() => setQuotaModalOpen(false)} onContact={() => { setQuotaModalOpen(false); setContactSent(false); setContactOpen(true); }} onCheckout={handleCheckout} checkoutLoading={checkoutLoading} checkoutError={checkoutError} />}
                 {termsOpen && <div className="contact-backdrop" onClick={() => setTermsOpen(false)} aria-hidden="true" />}
                 {termsOpen && <section className="contact-dialog policy-dialog" role="dialog" aria-modal="true" aria-labelledby="terms-title">
-                    <div className="contact-dialog-head"><div><span className="eyebrow">Policy</span><h2 id="terms-title">Financial Analyzer Terms</h2></div><button className="contact-close" onClick={() => setTermsOpen(false)} aria-label="Close terms dialog">×</button></div>
+                    <div className="contact-dialog-head"><div><span className="eyebrow">Policy</span><h2 id="terms-title">Financial Analyzer Terms</h2></div><button className="contact-close" onClick={() => setTermsOpen(false)} aria-label="Close terms dialog" title="Close terms dialog">×</button></div>
                     <div className="policy-content">
                         <p className="policy-effective">Effective August 20, 2026</p>
                         <h3>Using Financial Analyzer</h3>
@@ -1213,7 +1214,7 @@ function App() {
                 </section>}
                 {privacyOpen && <div className="contact-backdrop" onClick={() => setPrivacyOpen(false)} aria-hidden="true" />}
                 {privacyOpen && <section className="contact-dialog policy-dialog" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
-                    <div className="contact-dialog-head"><div><span className="eyebrow">Policy</span><h2 id="privacy-title">Financial Analyzer Privacy</h2></div><button className="contact-close" onClick={() => setPrivacyOpen(false)} aria-label="Close privacy dialog">×</button></div>
+                    <div className="contact-dialog-head"><div><span className="eyebrow">Policy</span><h2 id="privacy-title">Financial Analyzer Privacy</h2></div><button className="contact-close" onClick={() => setPrivacyOpen(false)} aria-label="Close privacy dialog" title="Close privacy dialog">×</button></div>
                     <div className="policy-content">
                         <p className="policy-effective">Updated August 20, 2026</p>
                         <h3>Information we use</h3>
@@ -1228,7 +1229,7 @@ function App() {
                 </section>}
                 {securityOpen && <div className="contact-backdrop" onClick={() => setSecurityOpen(false)} aria-hidden="true" />}
                 {securityOpen && <section className="contact-dialog policy-dialog" role="dialog" aria-modal="true" aria-labelledby="security-title">
-                    <div className="contact-dialog-head"><div><span className="eyebrow">Trust and safety</span><h2 id="security-title">Financial Analyzer Security</h2></div><button className="contact-close" onClick={() => setSecurityOpen(false)} aria-label="Close security dialog">×</button></div>
+                    <div className="contact-dialog-head"><div><span className="eyebrow">Trust and safety</span><h2 id="security-title">Financial Analyzer Security</h2></div><button className="contact-close" onClick={() => setSecurityOpen(false)} aria-label="Close security dialog" title="Close security dialog">×</button></div>
                     <div className="policy-content">
                         <p className="policy-effective">Security practices for your workspace</p>
                         <h3>Protected access</h3>
@@ -1243,18 +1244,18 @@ function App() {
                 </section>}
                 {docsOpen && <div className="contact-backdrop" onClick={() => setDocsOpen(false)} aria-hidden="true" />}
                 {docsOpen && <section className="contact-dialog docs-dialog" role="dialog" aria-modal="true" aria-labelledby="docs-title">
-                    <div className="contact-dialog-head"><div><span className="eyebrow">Financial Analyzer</span><h2 id="docs-title">Documentation</h2></div><button className="contact-close" onClick={() => setDocsOpen(false)} aria-label="Close documentation">×</button></div>
+                    <div className="contact-dialog-head"><div><span className="eyebrow">Financial Analyzer</span><h2 id="docs-title">Documentation</h2></div><button className="contact-close" onClick={() => setDocsOpen(false)} aria-label="Close documentation" title="Close documentation">×</button></div>
                     <label className="docs-search">Search documentation<input type="search" value={docsQuery} onChange={event => setDocsQuery(event.target.value)} placeholder="Search reports, analytics, account..." /></label>
                     <div className="docs-list">{appDocs.filter(section => `${section.title} ${section.text}`.toLowerCase().includes(docsQuery.toLowerCase())).map(section => <article className="docs-item" key={section.title}><h3>{section.title}</h3><p>{section.text}</p></article>)}{appDocs.every(section => !`${section.title} ${section.text}`.toLowerCase().includes(docsQuery.toLowerCase())) && <div className="docs-empty">No documentation topics match your search.</div>}</div>
                 </section>}
                 {cookiesOpen && <div className="contact-backdrop" onClick={() => setCookiesOpen(false)} aria-hidden="true" />}
                 {cookiesOpen && <section className="contact-dialog cookie-dialog" role="dialog" aria-modal="true" aria-labelledby="cookies-title">
-                    <div className="contact-dialog-head"><div><span className="eyebrow">Financial Analyzer</span><h2 id="cookies-title">Manage cookie preferences</h2></div><button className="contact-close" onClick={() => setCookiesOpen(false)} aria-label="Close cookie preferences">×</button></div>
+                    <div className="contact-dialog-head"><div><span className="eyebrow">Financial Analyzer</span><h2 id="cookies-title">Manage cookie preferences</h2></div><button className="contact-close" onClick={() => setCookiesOpen(false)} aria-label="Close cookie preferences" title="Close cookie preferences">×</button></div>
                     <div className="policy-content"><p>Cookies are small files stored on your device to remember settings, keep your workspace secure, and help us understand how the app is used.</p><h3>Required</h3><p>Required cookies support sign-in, secure sessions, preferences, and core workspace functions. They cannot be switched off.</p><div className="cookie-choice"><div><strong>Required cookies</strong><span>Always active</span></div><span className="cookie-status is-required">Required</span></div><h3>Analytics</h3><p>Analytics cookies help us understand which screens and workflows are useful so we can improve Financial Analyzer.</p><div className="cookie-choice"><div><strong>Analytics cookies</strong><span>Optional usage insights</span></div><div className="cookie-actions"><button className={cookiePreferences.analytics ? "is-selected" : ""} onClick={() => setCookiePreferences(preferences => ({ ...preferences, analytics: true }))}>Accept</button><button className={!cookiePreferences.analytics ? "is-selected" : ""} onClick={() => setCookiePreferences(preferences => ({ ...preferences, analytics: false }))}>Reject</button></div></div><h3>Social media and advertising</h3><p>Financial Analyzer does not use social media or advertising cookies.</p><div className="cookie-choice"><div><strong>Social media and advertising</strong><span>Not used</span></div><span className="cookie-status">Not used</span></div></div>
                     <button className="primary-button cookie-save" onClick={() => { window.localStorage.setItem("financial-cookie-preferences", JSON.stringify(cookiePreferences)); setCookiesOpen(false); }}>Save changes</button>
                 </section>}
                 <footer className="workspace-footer">
-                    <div className="footer-brand"><span className="brand-mark">₹</span><span className="footer-copyright">© 2026 Financial Analyzer</span></div>
+                    <div className="footer-brand"><span className="brand-mark" aria-hidden="true">₹</span><span className="footer-copyright">© 2026 Financial Analyzer</span></div>
                     <nav className="footer-navigation" aria-label="Footer navigation">
                         <button className="footer-link" onClick={() => setTermsOpen(true)}>Terms</button>
                         <button className="footer-link" onClick={() => setPrivacyOpen(true)}>Privacy</button>

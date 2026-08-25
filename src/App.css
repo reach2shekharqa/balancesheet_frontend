@@ -706,6 +706,64 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .balance-sheet-1a-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .balance-sheet-1a-state { display: grid; place-items: center; min-height: 420px; color: var(--muted); text-align: center; }
 .comparison-chart-panel { min-height: 390px; }
+.balance-sheet-comparison { display: grid; gap: 22px; padding: 4px 2px 10px; }
+.balance-sheet-overview, .balance-sheet-source-section, .balance-sheet-ratios { display: grid; gap: 15px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.balance-sheet-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.balance-sheet-section-heading h3 { margin: 5px 0 4px; color: var(--ink); font-size: 18px; }
+.balance-sheet-section-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.balance-sheet-overview-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.balance-sheet-overview-card, .balance-sheet-ratio-card { display: grid; gap: 7px; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.balance-sheet-overview-card span, .balance-sheet-overview-card small, .balance-sheet-ratio-card span { color: var(--muted); font-size: 11px; }
+.balance-sheet-overview-card strong, .balance-sheet-ratio-card strong { overflow: hidden; color: var(--ink); font-size: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.balance-sheet-overview-card small { color: var(--subtle); }
+.balance-sheet-sections-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.balance-sheet-section-total { color: var(--ink); font-size: 16px; font-weight: 800; white-space: nowrap; }
+.balance-sheet-source-list { display: grid; gap: 8px; }
+.balance-sheet-source-list div { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.balance-sheet-source-list div:last-child { padding-bottom: 0; border-bottom: 0; }
+.balance-sheet-source-list strong { color: var(--ink); font-weight: 700; white-space: nowrap; }
+.balance-sheet-section-note { margin: 0; color: var(--subtle); font-size: 11px; }
+.balance-sheet-ratio-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.balance-sheet-health-copy { max-width: 330px; color: var(--muted); font-size: 11px; line-height: 1.45; text-align: right; }
+.balance-sheet-health-copy.is-positive { color: #276749; }
+.balance-sheet-health-copy.is-attention { color: #8a5a12; }
+.balance-sheet-health-copy.is-risk { color: #a33a32; }
+.balance-sheet-health-insights { display: grid; gap: 15px; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.balance-sheet-health-list { display: grid; gap: 8px; }
+.balance-sheet-health-card { display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface-raised, #f7f9fa); }
+.balance-sheet-health-card strong { min-width: 58px; font-size: 12px; }
+.balance-sheet-health-card span { color: var(--muted); font-size: 12px; }
+.balance-sheet-health-card.is-positive { border-left-color: #55a66e; }
+.balance-sheet-health-card.is-positive strong { color: #276749; }
+.balance-sheet-health-card.is-attention { border-left-color: #d49a32; }
+.balance-sheet-health-card.is-attention strong { color: #8a5a12; }
+.balance-sheet-health-card.is-risk { border-left-color: #c4584f; }
+.balance-sheet-health-card.is-risk strong { color: #a33a32; }
+.balance-sheet-health-empty { margin: 0; color: var(--muted); font-size: 12px; }
+.balance-sheet-comparison-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.balance-sheet-comparison-heading h3 { margin: 5px 0 5px; color: var(--ink); font-size: 20px; }
+.balance-sheet-comparison-heading p { max-width: 620px; margin: 0; color: var(--muted); font-size: 12px; }
+.balance-sheet-period-pair { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.balance-sheet-period-pair strong { color: var(--ink); }
+.balance-sheet-insight-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.balance-sheet-insight-card { display: grid; gap: 7px; min-width: 0; padding: 15px; border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 7px; background: var(--surface); }
+.balance-sheet-insight-card > span, .balance-sheet-insight-card small { color: var(--muted); font-size: 11px; }
+.balance-sheet-insight-card > strong { overflow: hidden; color: var(--ink); font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.balance-sheet-insight-card small { color: var(--accent-dark); font-weight: 700; }
+.balance-sheet-insight-card p { min-height: 32px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.balance-sheet-insight-card em { color: var(--subtle); font-size: 10px; font-style: normal; }
+.balance-sheet-finance-costs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--line); }
+.balance-sheet-finance-costs div { display: grid; gap: 6px; padding: 13px 15px; background: var(--surface); }
+.balance-sheet-finance-costs span { color: var(--muted); font-size: 11px; }
+.balance-sheet-finance-costs strong { color: var(--ink); font-size: 15px; }
+.balance-sheet-comparison-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 7px; }
+.balance-sheet-comparison-table { width: 100%; border-collapse: collapse; min-width: 620px; font-size: 12px; }
+.balance-sheet-comparison-table caption { padding: 13px 15px; color: var(--ink); font-size: 13px; font-weight: 800; text-align: left; }
+.balance-sheet-comparison-table th, .balance-sheet-comparison-table td { padding: 10px 15px; border-top: 1px solid var(--line); text-align: right; }
+.balance-sheet-comparison-table th:first-child, .balance-sheet-comparison-table td:first-child { text-align: left; }
+.balance-sheet-comparison-table thead th { color: var(--muted); font-size: 11px; }
+.balance-sheet-comparison-table tbody th { color: var(--ink); font-weight: 700; }
+.balance-sheet-comparison-table tbody td { color: var(--muted); }
 .profit-loss-1a { display: grid; gap: 26px; }
 .profit-loss-1a-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
 .profit-loss-1a-heading h2 { margin: 5px 0 4px; color: var(--ink); font-size: 21px; }
@@ -864,7 +922,8 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .key-metric-change { background: rgba(255, 255, 255, .62); color: #2f7854; }
 .metric-trend { background: rgba(255, 255, 255, .58); }
 @media (max-width: 980px) { .key-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .key-metric-card, .key-metric-card:nth-child(1) { grid-column: span 1; } }
-@media (max-width: 760px) { .balance-sheet-1a-heading, .balance-sheet-1a-charts { display: grid; grid-template-columns: 1fr; align-items: start; } .balance-sheet-1a-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .balance-sheet-1a-heading, .balance-sheet-1a-charts { display: grid; grid-template-columns: 1fr; align-items: start; } .balance-sheet-1a-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .balance-sheet-comparison-heading { display: grid; } .balance-sheet-period-pair { justify-content: center; } .balance-sheet-insight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .balance-sheet-overview-grid, .balance-sheet-ratio-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .balance-sheet-sections-grid { grid-template-columns: 1fr; } .balance-sheet-health-copy { max-width: none; text-align: left; } }
+@media (max-width: 480px) { .balance-sheet-insight-grid, .balance-sheet-finance-costs { grid-template-columns: 1fr; } .balance-sheet-insight-card p { min-height: 0; } }
 @media (max-width: 760px) { .profit-loss-1a-heading { display: grid; align-items: start; } .profit-loss-1a-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) {
     .insights-heading-row { display: block; }
@@ -1582,6 +1641,23 @@ body { background: #eef0ed; }
     .workspace-app .sidebar-report-history .report-selector span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .workspace-app .sidebar-report-history .history-item-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+    .workspace-app.sidebar-collapsed .sidebar { width: 76px; flex-basis: 76px; padding-inline: 10px; align-items: center; }
+    .workspace-app.sidebar-collapsed .sidebar .brand-lockup { gap: 0; }
+    .workspace-app.sidebar-collapsed .sidebar .brand-lockup strong,
+    .workspace-app.sidebar-collapsed .sidebar-label,
+    .workspace-app.sidebar-collapsed .nav-item { font-size: 0; }
+    .workspace-app.sidebar-collapsed .main-nav { width: 100%; margin-top: 35px; }
+    .workspace-app.sidebar-collapsed .nav-item { justify-content: center; padding-inline: 0; }
+    .workspace-app.sidebar-collapsed .nav-item .nav-icon { display: grid; flex: 0 0 24px; font-size: 17px; }
+    .workspace-app.sidebar-collapsed .nav-item .nav-chevron,
+    .workspace-app.sidebar-collapsed .nav-item .nav-active-indicator,
+    .workspace-app.sidebar-collapsed .sidebar-report-history { display: none; }
+    .workspace-app.sidebar-collapsed .sidebar-companies-list { position: absolute; z-index: 12; top: 0; left: calc(100% + 8px); display: grid; width: 250px; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: var(--shadow); }
+    .workspace-app.sidebar-collapsed .sidebar-footer { width: 100%; }
+    .workspace-app .sidebar .brand-lockup { width: 100%; }
+    .sidebar-view-toggle { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; margin-left: auto; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; }
+    .sidebar-view-toggle:hover { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-soft); }
+    .sidebar-view-toggle-icon { font-size: 16px; line-height: 1; }
 .workspace-app .selected-file-card strong, .workspace-app .document-row strong { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Landing page refresh. */
@@ -1825,3 +1901,45 @@ body { background: #eef0ed; }
     .landing-page .cta-panel { align-items: flex-start; flex-direction: column; padding: 30px 24px; }
     .landing-page .cta-panel .landing-gold-cta { width: 100%; }
 }
+
+@media (max-width: 600px) {
+    .workspace-app .topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; min-height: 0; gap: 8px 12px; padding: 12px 16px; }
+    .workspace-app .topbar > div:first-of-type { min-width: 0; }
+    .workspace-app .topbar-kicker { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .workspace-app .topbar-actions { grid-column: auto; width: auto; justify-content: flex-end; }
+}
+
+.workspace-app.theme-dark,
+.workspace-app.theme-dark .workspace-main,
+.workspace-app.theme-dark .content-grid,
+.workspace-app.theme-dark .workspace-footer { background: var(--canvas); color: var(--ink); }
+.workspace-app.theme-dark .welcome-panel { border-color: #3d5147; background: #26332c; }
+.workspace-app.theme-dark .welcome-panel::after { background: linear-gradient(90deg, rgba(38, 51, 44, .98), rgba(38, 51, 44, .78) 55%, rgba(38, 51, 44, .2)); }
+.workspace-app.theme-dark .kpi-card,
+.workspace-app.theme-dark .upload-zone,
+.workspace-app.theme-dark .insights-workspace,
+.workspace-app.theme-dark .chart-panel,
+.workspace-app.theme-dark .report-history,
+.workspace-app.theme-dark .document-row,
+.workspace-app.theme-dark .key-metric-card { border-color: var(--line); background: var(--surface); color: var(--ink); }
+.workspace-app.theme-dark .upload-zone { background: #202b25; }
+.workspace-app.theme-dark .upload-zone:hover,
+.workspace-app.theme-dark .upload-zone.has-file { background: #263a31; }
+.workspace-app.theme-dark .insight-mode-switcher,
+.workspace-app.theme-dark .analytics-tabs { border-color: var(--line); background: #29342e; }
+.workspace-app.theme-dark .section-header h2,
+.workspace-app.theme-dark .section-header p,
+.workspace-app.theme-dark .kpi-label,
+.workspace-app.theme-dark .kpi-foot,
+.workspace-app.theme-dark .upload-zone-content span,
+.workspace-app.theme-dark .upload-zone-content small,
+.workspace-app.theme-dark .footer-navigation { color: var(--muted); }
+.workspace-app.theme-dark .section-header h2,
+.workspace-app.theme-dark .upload-zone-content strong { color: var(--ink); }
+.workspace-app.theme-dark .mobile-nav-drawer { background: var(--surface); color: var(--ink); }
+.workspace-app.theme-dark .mobile-nav-drawer > a,
+.workspace-app.theme-dark .mobile-report-toggle,
+.workspace-app.theme-dark .mobile-logout { border-bottom-color: var(--line); color: var(--ink); }
+.workspace-app.theme-dark .mobile-nav-drawer > a:hover,
+.workspace-app.theme-dark .mobile-report-toggle:hover,
+.workspace-app.theme-dark .mobile-logout:hover { background: var(--accent-soft); color: var(--accent-dark); }

@@ -2,11 +2,11 @@ import { useState } from "react";
 
 import AssetsBreakdownChart from "./AssetsBreakdownChart";
 import LiabilitiesBreakdownChart from "./LiabilitiesBreakdownChart";
-import MultiPeriodComparisonChart from "./MultiPeriodComparisonChart";
+import BalanceSheetComparison from "./BalanceSheetComparison";
 import { deriveFinancialPeriods } from "../utils/financialStatementData";
 import { getAnalyticsTab } from "../config/analyticsTabs.config";
 
-function BalanceSheet1A({ assets, liabilities, loading = false }) {
+function BalanceSheet1A({ assets, liabilities, profitLoss, keyMetrics, loading = false }) {
     const heading = getAnalyticsTab("balanceSheet1A")?.heading ?? {};
     const periods = deriveFinancialPeriods(assets, liabilities);
     const [selectedPeriod, setSelectedPeriod] = useState(null);
@@ -43,16 +43,7 @@ function BalanceSheet1A({ assets, liabilities, loading = false }) {
             </div>
             {activeView === "comparison" ? (
                 <section className="chart-panel comparison-chart-panel" aria-label="Balance sheet multi-period comparison">
-                    <MultiPeriodComparisonChart
-                        title="Balance sheet comparison"
-                        subtitle="Assets, liabilities and equity across available periods"
-                        sources={[assets, liabilities]}
-                        seriesDefinitions={[
-                            { source: assets, metricName: "totalAssets", label: "Total assets", color: "#1769d4" },
-                            { source: liabilities, metricName: "totalLiabilities", label: "Total liabilities", color: "#d66b58" },
-                            { source: liabilities, metricName: "totalEquity", label: "Total equity", color: "#16845b" },
-                        ]}
-                    />
+                    <BalanceSheetComparison assets={assets} liabilities={liabilities} profitLoss={profitLoss} keyMetrics={keyMetrics} />
                 </section>
             ) : activeView === "assets" ? (
                 <section className="chart-panel" aria-label={`Assets for ${displayedPeriod}`}>
