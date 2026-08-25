@@ -986,7 +986,7 @@ function App() {
                 });
                 setCheckoutError("");
                 setQuotaModalOpen(true);
-                setMessage("");
+                setMessage(error.message || "Your upload limit has been reached.");
             } else {
                 setMessage(error.isBatchDocumentFailure ? `Unable to upload document: ${error.message || "Upload failed."}` : error.message || "Unable to load balance sheet analytics. Please try again.");
             }
