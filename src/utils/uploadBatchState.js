@@ -24,7 +24,7 @@ export function canUploadForCompany(company) {
     return !company || company.accessRole === "OWNER";
 }
 
-export function getIdentityValidationState(selectedFiles, cachedIdentities = []) {
+export function getIdentityValidationState(selectedFiles, cachedIdentities = [], expectedCompanyCin = null) {
     if (selectedFiles.length === 0) return { status: "idle", identities: [], error: "" };
 
     const identitiesByHash = new Map(cachedIdentities.map(item => [item.fileHash, item.identity]));
@@ -42,6 +42,26 @@ export function getIdentityValidationState(selectedFiles, cachedIdentities = [])
         };
     }
     const unavailable = identities.find(identity => !identity.cin);
+    const normalizedIdentities = identities.map(identity => ({
+        ...identity,
+        cin: identity.cin ? String(identity.cin).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
+        pan: identity.pan ? String(identity.pan).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
+    }));
+    const normalizedExpectedCin = expectedCompanyCin
+        ? String(expectedCompanyCin).replace(/[\s:;,#|/-]+/g, "").toUpperCase()
+        : null;
+    if (normalizedExpectedCin) {
+        const conflict = normalizedIdentities.find(identity => identity.cin && identity.cin !== normalizedExpectedCin);
+        if (conflict) {
+            return {
+                status: "conflict",
+                identities,
+                error: `${conflict.filename} has a CIN mismatch. Its CIN is ${conflict.cin}, but this workspace uses ${normalizedExpectedCin}. Please remove this file to continue.`,
+                filename: conflict.filename,
+                field: "CIN"
+            };
+        }
+    }
     if (selectedFiles.length === 1) {
         const identity = identities[0];
         if (!identity.cin) {
@@ -52,11 +72,6 @@ export function getIdentityValidationState(selectedFiles, cachedIdentities = [])
     if (unavailable) {
         return { status: "incomplete", identities, error: `${unavailable.filename} doesn't contain the required CIN information. Please remove this file to continue.`, filename: unavailable.filename };
     }
-    const normalizedIdentities = identities.map(identity => ({
-        ...identity,
-        cin: identity.cin ? String(identity.cin).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
-        pan: identity.pan ? String(identity.pan).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
-    }));
     const conflictField = ["cin", "pan"].find(field => {
         const values = normalizedIdentities.map(identity => identity[field]).filter(Boolean);
         return values.length > 1 && values.some(value => value !== values[0]);

@@ -405,11 +405,11 @@ function App() {
                     return { fileHash: file.fileHash, identity: { filename: name, status: "error", error: error.message, extractionError: error.debugMessage || "PDF.js could not read the file." } };
                 }
             }));
-            if (!cancelled) setIdentityState(getIdentityValidationState(selectedFiles, identities));
+            if (!cancelled) setIdentityState(getIdentityValidationState(selectedFiles, identities, activeCompany?.cin));
         }
         validateSelectedIdentities();
         return () => { cancelled = true; };
-    }, [selectedFiles]);
+    }, [activeCompany?.cin, selectedFiles]);
 
     useEffect(() => {
         const handleHashChange = () => setActiveSection(window.location.hash || "#dashboard");

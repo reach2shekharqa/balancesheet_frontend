@@ -249,6 +249,18 @@ test("single PDF with CIN and no PAN enables analysis", () => {
     assert.equal(canAnalyzeFiles(files, false, state), true);
 });
 
+test("single PDF with a different company CIN is blocked", () => {
+    const files = [{ file: pdf("financial_1ANnnnnnnnnnnnnnnnnnn.pdf"), name: "financial_1ANnnnnnnnnnnnnnnnnnn.pdf" }];
+    files[0].file.fileHash = "a".repeat(64);
+    const state = getIdentityValidationState(files, [{
+        fileHash: "a".repeat(64),
+        identity: { cin: "U24100PB2022PLC055213", pan: null }
+    }], "U12345HR2010PTC123456");
+    assert.equal(state.status, "conflict");
+    assert.equal(state.field, "CIN");
+    assert.equal(canAnalyzeFiles(files, false, state), false);
+});
+
 test("CIN and PAN normalization prevents false conflicts", () => {
     const files = [pdf("A.pdf"), pdf("B.pdf")].map(file => ({ file, name: file.name }));
     files.forEach(({ file }, index) => { file.fileHash = `${index}`.repeat(64); });
