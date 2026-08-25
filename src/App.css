@@ -755,6 +755,19 @@ button:focus-visible, a:focus-visible, input:focus-visible + label { outline: 3p
 .key-metrics-details-source-row span:not(:first-child) { text-align: right; }
 .key-metrics-details-provenance { display: grid; gap: 4px; margin: 18px 0 0; color: var(--muted); font-size: 11px; }
 .key-metrics-details-provenance strong { color: var(--ink); }
+.key-metrics-details-traces { display: grid; gap: 8px; margin-top: 18px; }
+.key-metrics-details-traces h4, .key-metrics-details-components-title { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.key-metrics-details-traces h4 { margin: 0; }
+.key-metrics-details-source-note { margin: 0; color: var(--subtle); font-size: 10px; line-height: 1.45; }
+.key-metrics-details-trace { display: grid; gap: 6px; padding: 9px 0; border-top: 1px solid var(--line); }
+.key-metrics-details-trace-summary { display: grid; gap: 2px; font-size: 11px; }
+.key-metrics-details-trace-summary span { color: var(--muted); font-size: 10px; }
+.key-metrics-details-components { display: grid; gap: 4px; padding: 7px 8px; background: color-mix(in srgb, var(--surface) 88%, var(--accent-soft)); }
+.key-metrics-details-component-head, .key-metrics-details-component-row { display: grid; grid-template-columns: 40px minmax(0, 1.6fr) minmax(72px, 1fr) minmax(72px, 1fr); gap: 8px; align-items: center; }
+.key-metrics-details-component-head { color: var(--muted); font-size: 9px; }
+.key-metrics-details-component-row { padding-top: 5px; border-top: 1px solid var(--line); font-size: 10px; }
+.key-metrics-details-component-row span:nth-child(n+3) { text-align: right; }
+.key-metrics-details-component-row span:nth-child(2) { overflow-wrap: anywhere; }
 .key-metrics-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; }
 .key-metric-card { position: relative; display: grid; align-content: start; gap: 11px; grid-column: span 4; min-width: 0; min-height: 198px; overflow: hidden; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: linear-gradient(145deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 92%, var(--accent-soft)) 100%); box-shadow: 0 10px 24px rgba(23, 33, 43, .06); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
 .key-metric-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--accent); opacity: .8; }

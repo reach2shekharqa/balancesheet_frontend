@@ -5,6 +5,43 @@ function formatValue(value, metric, unit = metric?.unit) {
     return `${metric?.currencySymbol ?? ""}${Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}${unit ? ` ${unit}` : ""}`;
 }
 
+function formatSourceLocation(input) {
+    const source = input?.source ?? {};
+    const location = source.rowIndex === null || source.rowIndex === undefined || source.rowIndex < 0
+        ? "Row location unavailable"
+        : `Row ${source.rowIndex}`;
+    const section = source.section ? ` in ${source.section}` : "";
+    const method = input?.resolution?.method ?? source.resolutionReason;
+    return `${location}${section}${method ? `; ${method}` : ""}`;
+}
+
+function SourceTrace({ input, metric, currentPeriod, previousPeriod }) {
+    const components = input?.components ?? [];
+
+    return (
+        <div className="key-metrics-details-trace">
+            <div className="key-metrics-details-trace-summary">
+                <strong>{displayLabel(input.label)}</strong>
+                <span>{formatSourceLocation(input)}</span>
+            </div>
+            {components.length > 0 && (
+                <div className="key-metrics-details-components">
+                    <span className="key-metrics-details-components-title">Subsidiary data included</span>
+                    <div className="key-metrics-details-component-head"><span>Row</span><span>Component</span><span>{currentPeriod ?? "Current"}</span><span>{previousPeriod ?? "Previous"}</span></div>
+                    {components.map(component => (
+                        <div className="key-metrics-details-component-row" key={`${component.rowIndex}-${component.label}`}>
+                            <span>{component.rowIndex ?? "-"}</span>
+                            <span title={component.label}>{displayLabel(component.label)}</span>
+                            <span>{formatValue(component.values?.[currentPeriod], metric, "")}</span>
+                            <span>{formatValue(component.values?.[previousPeriod], metric, "")}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function MetricDetailsPanel({ metric, onClose }) {
     const calculation = metric?.calculation;
 
@@ -36,6 +73,13 @@ function MetricDetailsPanel({ metric, onClose }) {
                                 <span>{formatValue(input.previousValue, metric, "")}</span>
                             </div>
                         ))}
+                    </div>
+                )}
+                {calculation.inputs?.length > 0 && (
+                    <div className="key-metrics-details-traces">
+                        <h4>Source trace</h4>
+                        <p className="key-metrics-details-source-note">Each input below is the data selected for this calculation. Aggregates list the subsidiary rows included in their total.</p>
+                        {calculation.inputs.map(input => <SourceTrace key={input.key} input={input} metric={metric} currentPeriod={calculation.currentPeriod} previousPeriod={calculation.previousPeriod} />)}
                     </div>
                 )}
                 {calculation.source?.statement && <p className="key-metrics-details-provenance"><strong>Source statement</strong>{calculation.source.statement}</p>}
