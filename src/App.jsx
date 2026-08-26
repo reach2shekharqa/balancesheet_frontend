@@ -18,8 +18,8 @@ import StatusMessage from "./components/StatusMessage";
 import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
 import { extractIdentityFromPdf } from "./utils/pdfIdentityPreflight";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
+import { requestJson, setAuthToken } from "./authClient";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
 const initialAuthForm = { userName: "", email: "", password: "", registrationIntent: "owner", companyName: "", cin: "", pan: "" };
@@ -38,27 +38,6 @@ function toActiveCompany(company) {
         pan: company.pan,
         accessRole: company.accessRole,
     };
-}
-
-async function requestJson(path, options = {}) {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        credentials: "include",
-        headers: {
-            ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-            ...options.headers,
-        },
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
-        const error = new Error(result.error || "Request failed.");
-        error.status = response.status;
-        Object.assign(error, result);
-        throw error;
-    }
-
-    return result;
 }
 
 function LoadingIndicator({ label }) {
@@ -614,6 +593,7 @@ function App() {
                 method: "POST",
                 body: JSON.stringify(authForm),
             });
+            setAuthToken(result.token);
             setDocumentsLoading(true);
             setUser(result.user);
             setAuthDialogOpen(false);
@@ -669,6 +649,7 @@ function App() {
         } catch {
             return;
         } finally {
+            setAuthToken(null);
             logoutInFlightRef.current = false;
         }
     }
@@ -686,6 +667,7 @@ function App() {
                 method: "POST",
                 body: JSON.stringify({ credential }),
             });
+            setAuthToken(result.token);
             setDocumentsLoading(true);
             setUser(result.user);
             setAuthDialogOpen(false);
@@ -938,19 +920,11 @@ function App() {
             }
             filesToUpload.forEach(({ file }) => formData.append("files[]", file));
 
-            const uploadResponse = await fetch(`${API_BASE_URL}/documents/upload-batch`, {
+            const uploadResult = await requestJson("/documents/upload-batch", {
                 method: "POST",
                 body: formData,
-                credentials: "include",
             });
-
-            const uploadResult = await uploadResponse.json();
             console.log("Upload Result:", uploadResult);
-            if (!uploadResponse.ok) {
-                const error = new Error(uploadResult.message || uploadResult.error || "Upload failed.");
-                Object.assign(error, uploadResult);
-                throw error;
-            }
 
             const batchDocuments = uploadResult.documents ?? [];
             setUploadStatuses(batchDocuments.map(document => ({

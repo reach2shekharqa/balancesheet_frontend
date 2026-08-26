@@ -2,19 +2,9 @@ import { useEffect, useState } from "react";
 import "./admin.css";
 import { getAdminQuotaSummary } from "./adminQuota";
 import StatusMessage from "../StatusMessage";
+import { requestJson } from "../../authClient";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
-
-async function adminRequest(path, options = {}) {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        credentials: "include",
-        headers: { "Content-Type": "application/json", ...options.headers },
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Admin request failed.");
-    return result;
-}
+const adminRequest = requestJson;
 
 function date(value) {
     return value ? new Date(value).toLocaleString() : "-";
