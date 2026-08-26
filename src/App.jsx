@@ -138,12 +138,9 @@ function LandingPage({ onGetStarted, showEntryChooser }) {
             <footer className="nl-foot"><div className="nl-shell nl-foot-inner"><span>₹ Financial Analyzer</span><a href="mailto:support@financialanalyzer.app">support@financialanalyzer.app</a><span>Figures shown are a sample, not a real filing.</span></div></footer>
             <AnimatePresence>
                 {entryChooserOpen && <motion.div className="entry-chooser-layer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                <motion.button className="auth-dialog-backdrop" type="button" aria-label="Close start options" onClick={() => setEntryChooserOpen(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+                <div className="entry-chooser-brand"><span className="brand-mark" aria-hidden="true">₹</span><strong>Financial Analyzer</strong></div>
                 <motion.section className="entry-chooser" role="dialog" aria-modal="true" aria-labelledby="entry-chooser-title" initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.98 }} transition={{ type: "spring", stiffness: 280, damping: 24 }}>
-                    <button className="auth-close" type="button" aria-label="Close start options" title="Close start options" onClick={() => setEntryChooserOpen(false)}>×</button>
-                    <span className="eyebrow">Start with clarity</span>
-                    <h2 id="entry-chooser-title">How will you use Financial Analyzer?</h2>
-                    <p>Choose an option to continue. You can change this later by signing out.</p>
+                    <h2 id="entry-chooser-title">Log in or sign up</h2>
                     <AuthPathChooser standalone onSelect={selectEntryPath} />
                 </motion.section>
                 </motion.div>}
@@ -243,9 +240,9 @@ function RegistrationFields({ authForm, onChange }) {
 
 function AuthPathChooser({ authMode = "", registrationIntent = "owner", onSelect, standalone = false }) {
     const paths = [
-        { id: "owner", number: "01", title: "Create a company workspace", description: "For owners and managers who upload and analyze their own reports.", mode: "register", intent: "owner" },
-        { id: "login", number: "02", title: "Sign in to a company workspace", description: "For existing users who already have account access to a company.", mode: "login", intent: registrationIntent },
-        { id: "consumer", number: "03", title: "View a shared workspace", description: "For people invited to analyze reports shared by a company.", mode: "register", intent: "consumer" },
+        { id: "owner", icon: "▣", title: "Create a company workspace", description: "For owners and managers who upload and analyze their own reports.", mode: "register", intent: "owner" },
+        { id: "login", icon: "↪", title: "Sign in to a company workspace", description: "For existing users who already have account access to a company.", mode: "login", intent: registrationIntent },
+        { id: "consumer", icon: "◉", title: "View a shared workspace", description: "For people invited to analyze reports shared by a company.", mode: "register", intent: "consumer" },
     ];
     return <div className="auth-paths" aria-label="Choose how to continue">
         <div className="auth-paths-heading"><strong>How would you like to continue?</strong><span>Choose the option that fits you best.</span></div>
@@ -253,7 +250,7 @@ function AuthPathChooser({ authMode = "", registrationIntent = "owner", onSelect
             {paths.map(path => {
                 const selected = !standalone && path.mode === authMode && (path.mode === "login" || path.intent === registrationIntent);
                 return <motion.button type="button" className={`auth-path-card auth-path-${path.id} ${selected ? "is-selected" : ""}`} key={path.id} onClick={() => onSelect(path.mode, path.intent)} aria-pressed={selected} whileHover={{ y: -3 }} whileTap={{ scale: 0.985 }}>
-                    <span className="auth-path-number">{path.number}</span><span className="auth-path-copy"><strong>{path.title}</strong><small>{path.description}</small></span><span className="auth-path-arrow" aria-hidden="true">→</span>
+                    <span className="auth-path-icon" aria-hidden="true">{path.icon}</span><span className="auth-path-copy"><strong>{path.title}</strong><small>{path.description}</small></span><span className="auth-path-arrow" aria-hidden="true">→</span>
                 </motion.button>;
             })}
         </div>
@@ -1060,7 +1057,7 @@ function App() {
             {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />}
             {mobileNavOpen && <nav className="mobile-nav-drawer" aria-label="Mobile navigation"><div className="mobile-drawer-head"><strong>Financial Analyzer</strong><button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" title="Close navigation"><span className="close-icon" aria-hidden="true"><span /><span /></span></button></div><a href="#dashboard" onClick={() => setMobileNavOpen(false)}>Dashboard</a><a href="#upload" onClick={() => setMobileNavOpen(false)}>Upload a financial report</a><a href="#analytics" onClick={() => setMobileNavOpen(false)}>Analytics</a><button className="mobile-report-toggle" onClick={() => setReportHistoryOpen(open => !open)} aria-expanded={reportHistoryOpen}>Report history <span aria-hidden="true">{reportHistoryOpen ? "⌃" : "⌄"}</span></button>{reportHistoryOpen && <div className="mobile-report-history">{documents.length === 0 && !documentsLoading ? <div className="history-empty"><strong>No reports yet</strong><p>Upload a financial report to start your analysis.</p></div> : <div className="history-list">{documents.map((document, index) => <button className={`history-item ${document.id === activeDocumentId ? "is-selected" : ""}`} key={document.id} onClick={() => { handleDocumentSelect(document.id); setMobileNavOpen(false); }}><span className="history-item-copy"><strong>{document.original_filename}</strong><small>{formatDocumentDate(document.uploaded_at || document.linked_at)}</small></span><span className="history-item-meta">{index === 0 && <em>Latest</em>}{document.extraction_status && <small>{document.extraction_status}</small>}</span></button>)}</div>}</div>}<CompanyAccessSection companies={companies} activeCompanyId={activeCompany?.companyId} expanded={companiesOpen} onToggle={() => setCompaniesOpen(open => !open)} expandedCompanies={expandedCompanies} onSelectCompany={companyId => { handleCompanySelect(companyId); setMobileNavOpen(false); }} onToggleCompany={companyId => setExpandedCompanies(current => ({ ...current, [companyId]: !current[companyId] }))} idPrefix="mobile" /><button className="mobile-logout" onClick={() => { setMobileNavOpen(false); handleLogout(); }}>Log out</button></nav>}
             <aside className="sidebar">
-                <div className="brand-lockup"><span className="brand-mark" aria-hidden="true">₹</span><strong>Financial<br />Analyzer</strong><button className="sidebar-view-toggle" type="button" onClick={() => setSidebarCollapsed(collapsed => !collapsed)} aria-label={sidebarCollapsed ? "Expand sidebar" : "Switch to full view"} title={sidebarCollapsed ? "Expand sidebar" : "Switch to full view"} aria-pressed={sidebarCollapsed}><span className="sidebar-view-toggle-icon" aria-hidden="true">{sidebarCollapsed ? ">" : "<"}</span></button></div>
+                <div className="brand-lockup"><span className="brand-mark" aria-hidden="true">₹</span><strong>Financial<br />Analyzer</strong><button className="sidebar-view-toggle" type="button" onClick={() => setSidebarCollapsed(collapsed => !collapsed)} aria-label={sidebarCollapsed ? "Open sidebar" : "Close sidebar"} aria-pressed={sidebarCollapsed}><span className="sidebar-view-toggle-icon" aria-hidden="true"><span /></span><span className="sidebar-view-toggle-label" aria-hidden="true">{sidebarCollapsed ? "Open sidebar" : "Close sidebar"}</span></button></div>
                 <div className="sidebar-label">Workspace</div>
                 <nav className="main-nav" aria-label="Main navigation">
                     <a className={`nav-item ${activeSection === "#dashboard" ? "is-active" : ""}`} href="#dashboard" title="Dashboard" aria-current={activeSection === "#dashboard" ? "page" : undefined}><NavIcon>+</NavIcon>Dashboard{activeSection === "#dashboard" && <motion.span className="nav-active-indicator" layoutId="nav-active-indicator" />}</a>
