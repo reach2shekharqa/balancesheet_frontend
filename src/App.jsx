@@ -1,24 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import "./App.css";
 
-import AssetsBreakdownChart from "./components/AssetsBreakdownChart";
-import AssetsComparisonChart from "./components/AssetsComparisonChart";
-import LiabilitiesBreakdownChart from "./components/LiabilitiesBreakdownChart";
-import BalanceSheet1A from "./components/BalanceSheet1A";
 import { getValidYears } from "./utils/analyticsData";
-import ProfitLossComparisonChart from "./components/ProfitLossComparisonChart";
-import ProfitLossExpensesChart from "./components/ProfitLossExpensesChart";
-import ProfitLoss1A from "./components/ProfitLoss1A";
 import KeyMetricsGrid from "./components/keyMetrics/KeyMetricsGrid";
 import KeyMetrics1A from "./components/keyMetrics/KeyMetrics1A";
 import { selectHistoricalData } from "./components/keyMetrics/keyMetrics1AData";
-import AdminDashboard from "./components/admin/AdminDashboard";
 import StatusMessage from "./components/StatusMessage";
 import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
-import { extractIdentityFromPdf } from "./utils/pdfIdentityPreflight";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
 import { requestJson, setAuthToken } from "./authClient";
+
+const AssetsBreakdownChart = lazy(() => import("./components/AssetsBreakdownChart"));
+const AssetsComparisonChart = lazy(() => import("./components/AssetsComparisonChart"));
+const LiabilitiesBreakdownChart = lazy(() => import("./components/LiabilitiesBreakdownChart"));
+const BalanceSheet1A = lazy(() => import("./components/BalanceSheet1A"));
+const ProfitLossComparisonChart = lazy(() => import("./components/ProfitLossComparisonChart"));
+const ProfitLossExpensesChart = lazy(() => import("./components/ProfitLossExpensesChart"));
+const ProfitLoss1A = lazy(() => import("./components/ProfitLoss1A"));
+const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
+
+let pdfIdentityPreflightPromise;
+
+function extractIdentityFromPdf(file) {
+    pdfIdentityPreflightPromise ||= import("./utils/pdfIdentityPreflight");
+    return pdfIdentityPreflightPromise.then(module => module.extractIdentityFromPdf(file));
+}
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
@@ -838,7 +845,7 @@ function App() {
             return <div className="app auth-loading"><div className="loading-card"><StatusMessage message="Admin access required." tone="error" persist /></div></div>;
         }
 
-        return <AdminDashboard user={user} onLogout={handleLogout} />;
+        return <Suspense fallback={<div className="app auth-loading"><div className="loading-card"><LoadingIndicator label="Loading admin workspace..." /></div></div>}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense>;
     }
 
 
@@ -1134,6 +1141,7 @@ function App() {
                                         exit={prefersReducedMotion ? undefined : { opacity: 0, y: -10 }}
                                         transition={workspaceTransition}
                                     >
+                                <Suspense fallback={<div className="analytics-loading"><LoadingIndicator label="Loading analytics view..." /></div>}>
                                 {activeAnalyticsTab === "balanceSheet1A" ? (
                                     <BalanceSheet1A assets={analyticsData.assets} liabilities={analyticsData.liabilities} profitLoss={analyticsData.profitLoss} keyMetrics={keyMetrics} loading={analyticsLoading.assets || analyticsLoading.liabilities} />
                                 ) : activeAnalyticsTab === "profitLoss1A" ? (
@@ -1166,6 +1174,7 @@ function App() {
                                         <section className="chart-panel chart-panel-featured">{activeChart === "comparison" ? analyticsLoading.assets ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <AssetsComparisonChart analyticsData={analyticsData.assets} /> : activeChart === "breakdown" ? analyticsLoading.assets ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <AssetsBreakdownChart analyticsData={analyticsData.assets} /> : analyticsLoading.liabilities ? <div className="analytics-loading"><LoadingIndicator label="Loading analytics..." /></div> : <LiabilitiesBreakdownChart analyticsData={analyticsData.liabilities} />}</section>
                                     </> : <div className="insights-skeleton"><LoadingIndicator label={documentsLoading ? "Loading reports..." : "Loading insights..."} /><span /></div>
                                 )}
+                                </Suspense>
                                     </motion.div>
                                 </AnimatePresence>
                             </div>
