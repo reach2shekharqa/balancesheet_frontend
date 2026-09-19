@@ -115,9 +115,9 @@ function mergeProfileIntoUser(user, profile, companyId) {
 
             return {
                 ...company,
-                companyName: profile.companyName || company.companyName || "",
-                cin: profile.cin || company.cin || "",
-                pan: profile.pan || company.pan || "",
+                companyName: Object.prototype.hasOwnProperty.call(profile, "companyName") ? (profile.companyName ?? "") : (company.companyName || ""),
+                cin: Object.prototype.hasOwnProperty.call(profile, "cin") ? (profile.cin ?? "") : (company.cin || ""),
+                pan: Object.prototype.hasOwnProperty.call(profile, "pan") ? (profile.pan ?? "") : (company.pan || ""),
                 accessRole: company.accessRole || "OWNER",
             };
         })
@@ -129,7 +129,7 @@ function mergeProfileIntoUser(user, profile, companyId) {
         ...user,
         companies: nextCompanies || user.companies || [],
         company: nextCompany,
-        email: profile.email || user.email || "",
+        email: Object.prototype.hasOwnProperty.call(profile, "email") ? (profile.email ?? "") : (user.email || ""),
     };
 }
 
@@ -352,7 +352,7 @@ export function CompanyProfileSetup({ savedProfile, onChange, onSubmit, onSkip }
                         <div className="company-profile-grid">
                             <label>
                                 Company name
-                                <input name="companyName" type="text" value={savedProfile.companyName} onChange={onChange} placeholder="Company name" required />
+                                <input name="companyName" type="text" value={savedProfile.companyName} onChange={onChange} placeholder="Company name" />
                             </label>
                             <label>
                                 Constitution
@@ -368,7 +368,7 @@ export function CompanyProfileSetup({ savedProfile, onChange, onSubmit, onSkip }
                             </label>
                             <label>
                                 {kycFieldLabel}
-                                <input name="kycValue" type="text" value={savedProfile.kycValue || ""} onChange={onChange} placeholder={`Enter ${kycFieldLabel.toLowerCase()}`} required />
+                                <input name="kycValue" type="text" value={savedProfile.kycValue || ""} onChange={onChange} placeholder={`Enter ${kycFieldLabel.toLowerCase()}`} />
                             </label>
                             <label>
                                 Email
@@ -875,10 +875,6 @@ function App() {
     async function handleCompanyProfileSubmit(event) {
         event.preventDefault();
         const companyName = String(profileSetupForm.companyName ?? "").trim();
-        if (!companyName) {
-            setAuthMessage("Company name is required.");
-            return;
-        }
 
         const selectedCompanyId = resolveCompanyId(activeCompany) || resolveCompanyId(profileSetupForm) || (Array.isArray(user?.companies) ? user.companies.map(company => resolveCompanyId(company)).find(Boolean) : null);
         if (!selectedCompanyId) {
@@ -904,9 +900,9 @@ function App() {
             setUser(refreshedUser);
             setActiveCompany(current => current ? {
                 ...current,
-                companyName: storedProfile.companyName || current.companyName || "",
-                cin: storedProfile.cin || current.cin || "",
-                pan: storedProfile.pan || current.pan || "",
+                companyName: Object.prototype.hasOwnProperty.call(storedProfile, "companyName") ? (storedProfile.companyName ?? "") : (current.companyName || ""),
+                cin: Object.prototype.hasOwnProperty.call(storedProfile, "cin") ? (storedProfile.cin ?? "") : (current.cin || ""),
+                pan: Object.prototype.hasOwnProperty.call(storedProfile, "pan") ? (storedProfile.pan ?? "") : (current.pan || ""),
             } : current);
             setProfileSetupForm(storedProfile);
             profileSetupSnapshotRef.current = storedProfile;
