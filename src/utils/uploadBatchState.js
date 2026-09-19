@@ -32,58 +32,12 @@ export function getIdentityValidationState(selectedFiles, cachedIdentities = [],
         filename: name,
         ...(identitiesByHash.get(file.fileHash) ?? {})
     }));
-    const failed = identities.find(identity => identity.status === "error");
-    if (failed) {
-        return {
-            status: "error",
-            identities,
-            error: `${failed.filename} doesn't contain the required CIN information. Please remove this file or upload a report containing the required company details.`,
-            filename: failed.filename
-        };
-    }
-    const unavailable = identities.find(identity => !identity.cin);
-    const normalizedIdentities = identities.map(identity => ({
-        ...identity,
-        cin: identity.cin ? String(identity.cin).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
-        pan: identity.pan ? String(identity.pan).replace(/[\s:;,#|/-]+/g, "").toUpperCase() : null,
-    }));
-    const normalizedExpectedCin = expectedCompanyCin
-        ? String(expectedCompanyCin).replace(/[\s:;,#|/-]+/g, "").toUpperCase()
-        : null;
-    if (normalizedExpectedCin) {
-        const conflict = normalizedIdentities.find(identity => identity.cin && identity.cin !== normalizedExpectedCin);
-        if (conflict) {
-            return {
-                status: "conflict",
-                identities,
-                error: `${conflict.filename} has a CIN mismatch. Its CIN is ${conflict.cin}, but this workspace uses ${normalizedExpectedCin}. Please remove this file to continue.`,
-                filename: conflict.filename,
-                field: "CIN"
-            };
-        }
-    }
-    if (selectedFiles.length === 1) {
-        const identity = identities[0];
-        if (!identity.cin) {
-            return { status: "incomplete", identities, error: `${identity.filename} doesn't contain the required CIN information. Please remove this file or upload a report containing the required company details.`, filename: identity.filename };
-        }
-        return { status: "verified", identities, error: "" };
-    }
-    if (unavailable) {
-        return { status: "incomplete", identities, error: `${unavailable.filename} doesn't contain the required CIN information. Please remove this file to continue.`, filename: unavailable.filename };
-    }
-    const conflictField = ["cin", "pan"].find(field => {
-        const values = normalizedIdentities.map(identity => identity[field]).filter(Boolean);
-        return values.length > 1 && values.some(value => value !== values[0]);
-    });
-    if (conflictField) {
-        const referenceValue = normalizedIdentities.find(identity => identity[conflictField])?.[conflictField];
-        const conflict = normalizedIdentities.find(identity => identity[conflictField] && identity[conflictField] !== referenceValue);
-        const label = conflictField.toUpperCase();
-        const error = `${conflict.filename} has a ${label} mismatch. Its ${label} is ${conflict[conflictField]}, but the other selected reports use ${referenceValue}. Please remove this file to continue.`;
-        return { status: "conflict", identities, error, filename: conflict.filename, field: conflictField.toUpperCase() };
-    }
-    return { status: "verified", identities, error: "" };
+
+    return {
+        status: "verified",
+        identities,
+        error: ""
+    };
 }
 
 export function getBatchResultState(documents) {

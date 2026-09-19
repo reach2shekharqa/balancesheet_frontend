@@ -10,6 +10,8 @@ import StatusMessage from "./components/StatusMessage";
 import { canAnalyzeFiles, canUploadForCompany, getBatchResultState, getIdentityValidationState, mergeUniqueFiles, removeFileByIdentity } from "./utils/uploadBatchState";
 import { defaultAnalyticsTab, isAnalyticsTabActive, visibleAnalyticsTabs } from "./config/analyticsTabs.config";
 import { requestJson, setAuthToken } from "./authClient";
+import { resolveCompanyId, toActiveCompany } from "./utils/companyProfile";
+import { shouldShowCompanyProfileSetup } from "./utils/companyProfileFlow";
 
 const AssetsBreakdownChart = lazy(() => import("./components/AssetsBreakdownChart"));
 const AssetsComparisonChart = lazy(() => import("./components/AssetsComparisonChart"));
@@ -29,21 +31,105 @@ function extractIdentityFromPdf(file) {
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
+const KYC_OPTIONS = ["PAN", "GST", "CIN"];
+const STATE_CITY_MAP = {
+    "Andaman and Nicobar Islands": ["Port Blair", "Havelock Island", "Neil Island", "Car Nicobar", "Diglipur"],
+    "Andhra Pradesh": ["Amaravati", "Anantapur", "Chittoor", "Guntur", "Kakinada", "Kurnool", "Rajahmundry", "Tirupati", "Vijayawada", "Visakhapatnam"],
+    "Arunachal Pradesh": ["Itanagar", "Naharlagun", "Pasighat", "Tawang", "Ziro"],
+    "Assam": ["Bongaigaon", "Dibrugarh", "Guwahati", "Jorhat", "Silchar", "Tezpur"],
+    "Bihar": ["Bhagalpur", "Darbhanga", "Gaya", "Muzaffarpur", "Patna", "Purnia"],
+    "Chandigarh": ["Chandigarh"],
+    "Chhattisgarh": ["Bhilai", "Bilaspur", "Durg", "Jagdalpur", "Korba", "Raipur"],
+    "Dadra and Nagar Haveli and Daman and Diu": ["Daman", "Diu", "Silvassa", "Vapi"],
+    "Delhi": ["Dwarka", "Karol Bagh", "New Delhi", "Rohini", "Saket", "Vasant Kunj"],
+    "Goa": ["Margao", "Mapusa", "Panaji", "Ponda", "Vasco da Gama"],
+    "Gujarat": ["Ahmedabad", "Anand", "Gandhinagar", "Junagadh", "Rajkot", "Surat", "Vadodara"],
+    "Haryana": ["Ambala", "Faridabad", "Gurugram", "Hisar", "Panipat", "Rohtak"],
+    "Himachal Pradesh": ["Bilaspur", "Kullu", "Mandi", "Shimla", "Solan"],
+    "Jammu and Kashmir": ["Anantnag", "Baramulla", "Jammu", "Kathua", "Srinagar", "Udhampur"],
+    "Jharkhand": ["Bokaro", "Deoghar", "Dhanbad", "Hazaribagh", "Jamshedpur", "Ranchi"],
+    "Karnataka": ["Bengaluru", "Belagavi", "Bidar", "Hubballi", "Mangaluru", "Mysuru"],
+    "Kerala": ["Alappuzha", "Ernakulam", "Kochi", "Kollam", "Kozhikode", "Thiruvananthapuram", "Thrissur"],
+    "Ladakh": ["Kargil", "Leh"],
+    "Lakshadweep": ["Agatti", "Andrott", "Kavaratti", "Minicoy"],
+    "Madhya Pradesh": ["Bhopal", "Gwalior", "Indore", "Jabalpur", "Sagar", "Ujjain"],
+    "Maharashtra": ["Aurangabad", "Nagpur", "Nashik", "Pune", "Mumbai", "Thane"],
+    "Manipur": ["Churachandpur", "Imphal", "Kakching", "Thoubal"],
+    "Meghalaya": ["Jowai", "Nongstoin", "Shillong", "Tura"],
+    "Mizoram": ["Aizawl", "Champhai", "Lunglei", "Serchhip"],
+    "Nagaland": ["Chümoukedima", "Dimapur", "Kohima", "Mokokchung"],
+    "Odisha": ["Bhubaneswar", "Cuttack", "Jharsuguda", "Puri", "Rourkela", "Sambalpur"],
+    "Puducherry": ["Karaikal", "Mahe", "Puducherry", "Yanam"],
+    "Punjab": ["Amritsar", "Bathinda", "Chandigarh", "Jalandhar", "Ludhiana", "Mohali"],
+    "Rajasthan": ["Ajmer", "Jaipur", "Jodhpur", "Kota", "Udaipur"],
+    "Sikkim": ["Gangtok", "Gyalshing", "Mangan", "Namchi"],
+    "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Salem", "Thanjavur", "Trichy"],
+    "Telangana": ["Hyderabad", "Khammam", "Nizamabad", "Secunderabad", "Warangal"],
+    "Tripura": ["Agartala", "Dharmanagar", "Kailashahar", "Khowai", "Udaipur"],
+    "Uttar Pradesh": ["Agra", "Allahabad", "Kanpur", "Lucknow", "Noida", "Varanasi"],
+    "Uttarakhand": ["Dehradun", "Haldwani", "Haridwar", "Rishikesh", "Roorkee"],
+    "West Bengal": ["Asansol", "Burdwan", "Durgapur", "Howrah", "Kolkata", "Siliguri"],
+};
+const STATE_OPTIONS = Object.keys(STATE_CITY_MAP).sort((a, b) => a.localeCompare(b, "en-IN"));
+const PRODUCT_OPTIONS = {
+    Trader: ["Agricultural commodities", "Metals", "Engineering parts", "Chemicals", "FMCG", "Food & Beverage", "Misc."],
+    Manufacturer: ["Agricultural commodities", "Metals", "Engineering parts", "Chemicals", "FMCG", "Food & Beverage", "Machinery", "Auto dealer", "Misc."],
+    "Service Provider": ["Security services", "Financial services", "Educational services", "Healthcare", "Hospitality", "Immigration", "Property & Services", "Misc."],
+};
 const initialAuthForm = { userName: "", email: "", password: "", registrationIntent: "owner", companyName: "", cin: "", pan: "" };
+const PROFILE_CONSTITUTION_OPTIONS = ["Proprietorship", "Partnership", "LLP", "Private Ltd", "Public Ltd", "Trust", "Society"];
+const initialProfileSetupForm = {
+    companyName: "",
+    constitution: "Proprietorship",
+    kyc: "PAN",
+    kycValue: "",
+    email: "",
+    contactNumber: "",
+    city: "",
+    state: "",
+    businessType: "Trader",
+    productType: PRODUCT_OPTIONS.Trader[0],
+};
+const KYC_TYPE_OPTIONS = ["PAN", "GST", "CIN"];
+const KYC_FIELD_LABELS = {
+    PAN: "PAN number",
+    GST: "GST number",
+    CIN: "CIN number",
+};
 const ACTIVE_COMPANY_STORAGE_KEY = "financial-active-company";
-
 function getUserCompanies(user) {
     return Array.isArray(user?.companies) ? user.companies : user?.company ? [user.company] : [];
 }
 
-function toActiveCompany(company) {
-    if (!company) return null;
+function mergeProfileIntoUser(user, profile, companyId) {
+    if (!user || !companyId || !profile) {
+        return user;
+    }
+
+    const targetCompanyId = String(companyId);
+    const nextCompanies = Array.isArray(user.companies)
+        ? user.companies.map(company => {
+            if (String(resolveCompanyId(company)) !== targetCompanyId) {
+                return company;
+            }
+
+            return {
+                ...company,
+                companyName: profile.companyName || company.companyName || "",
+                cin: profile.cin || company.cin || "",
+                pan: profile.pan || company.pan || "",
+                accessRole: company.accessRole || "OWNER",
+            };
+        })
+        : user.companies;
+
+    const nextCompany = nextCompanies?.find(company => String(resolveCompanyId(company)) === targetCompanyId) || user.company || null;
+
     return {
-        companyId: company.companyId,
-        companyName: company.companyName,
-        cin: company.cin,
-        pan: company.pan,
-        accessRole: company.accessRole,
+        ...user,
+        companies: nextCompanies || user.companies || [],
+        company: nextCompany,
+        email: profile.email || user.email || "",
     };
 }
 
@@ -175,11 +261,12 @@ function CompanyAccessSection({ companies, activeCompanyId, expanded, onToggle, 
         </button>
         {expanded && <div className="sidebar-companies-list" id={`${idPrefix}-companies-list`}>
             {companies.length === 0 ? <p className="companies-empty">No company assigned</p> : companies.map(company => {
-                const companyDetailsId = `${idPrefix}-company-${company.companyId}`;
-                const companyExpanded = expandedCompanies[company.companyId] === true;
-                const isSelected = String(activeCompanyId) === String(company.companyId);
-                return <div className="sidebar-company" key={company.companyId}>
-                    <button type="button" className={`sidebar-company-toggle ${companyExpanded ? "is-open" : ""} ${isSelected ? "is-selected" : ""}`} onClick={() => { onSelectCompany(company.companyId); onToggleCompany(company.companyId); }} aria-expanded={companyExpanded} aria-controls={companyDetailsId} aria-pressed={isSelected}>
+                const companyId = resolveCompanyId(company) || "unknown-company";
+                const companyDetailsId = `${idPrefix}-company-${companyId}`;
+                const companyExpanded = expandedCompanies[companyId] === true;
+                const isSelected = String(activeCompanyId) === String(companyId);
+                return <div className="sidebar-company" key={companyId}>
+                    <button type="button" className={`sidebar-company-toggle ${companyExpanded ? "is-open" : ""} ${isSelected ? "is-selected" : ""}`} onClick={() => { onSelectCompany(companyId); onToggleCompany(companyId); }} aria-expanded={companyExpanded} aria-controls={companyDetailsId} aria-pressed={isSelected}>
                         <span className="company-selection-indicator" aria-hidden="true">{isSelected ? "●" : "○"}</span>
                         <span className="sidebar-company-copy"><strong>{company.companyName}</strong><small>Access role: {company.accessRole}</small><small>CIN: {company.cin || "Not available"}</small></span>
                         <span className="nav-chevron" aria-hidden="true">{companyExpanded ? "⌃" : "⌄"}</span>
@@ -239,10 +326,95 @@ const appDocs = [
 function RegistrationFields({ authForm, onChange }) {
     const isOwner = authForm.registrationIntent === "owner";
     return isOwner ? <div className="auth-company-fields">
-            <div className="auth-form-section"><strong>Company information</strong><small>We use these details to match your financial reports.</small></div>
-            <label>Company Name *<input name="companyName" type="text" placeholder="Registered company name" value={authForm.companyName} onChange={onChange} required autoComplete="organization" /></label>
-            <div className="auth-field-row"><label>CIN *<input name="cin" type="text" placeholder="Enter your company CIN" value={authForm.cin} onChange={onChange} required maxLength="30" /></label><label>PAN (optional)<input name="pan" type="text" placeholder="Optional PAN" value={authForm.pan} onChange={onChange} maxLength="20" /></label></div>
+            <div className="auth-form-section"><strong>Company information</strong><small>We use this to match your workspace and reporting setup.</small></div>
+            <label>Company Name *<input name="companyName" type="text" placeholder="Registered company name" value={authForm.companyName} onChange={onChange} autoComplete="organization" /></label>
         </div> : null;
+}
+
+export function CompanyProfileSetup({ savedProfile, onChange, onSubmit, onSkip }) {
+    const selectedProductOptions = PRODUCT_OPTIONS[savedProfile.businessType] || PRODUCT_OPTIONS.Trader;
+    const cityOptions = savedProfile.state ? [...(STATE_CITY_MAP[savedProfile.state] || [])].sort((a, b) => a.localeCompare(b, "en-IN")) : [];
+    const kycFieldLabel = KYC_FIELD_LABELS[savedProfile.kyc] || "KYC number";
+
+    return (
+        <div className="company-profile-page">
+            <div className="company-profile-shell">
+                <section className="company-profile-hero">
+                    <div>
+                        <span className="eyebrow">PROFILE</span>
+                        <h1>Complete your company profile</h1>
+                        <p>We use this company name for your workspace.</p>
+                    </div>
+                </section>
+
+                <form className="company-profile-form" onSubmit={onSubmit}>
+                    <div className="company-profile-card">
+                        <div className="company-profile-grid">
+                            <label>
+                                Company name
+                                <input name="companyName" type="text" value={savedProfile.companyName} onChange={onChange} placeholder="Company name" required />
+                            </label>
+                            <label>
+                                Constitution
+                                <select name="constitution" value={savedProfile.constitution} onChange={onChange}>
+                                    {PROFILE_CONSTITUTION_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </label>
+                            <label>
+                                KYC type
+                                <select name="kyc" value={savedProfile.kyc} onChange={onChange}>
+                                    {KYC_TYPE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </label>
+                            <label>
+                                {kycFieldLabel}
+                                <input name="kycValue" type="text" value={savedProfile.kycValue || ""} onChange={onChange} placeholder={`Enter ${kycFieldLabel.toLowerCase()}`} required />
+                            </label>
+                            <label>
+                                Email
+                                <input name="email" type="email" value={savedProfile.email} onChange={onChange} placeholder="Email" />
+                            </label>
+                            <label>
+                                Contact number
+                                <input name="contactNumber" type="tel" value={savedProfile.contactNumber} onChange={onChange} placeholder="Contact number" />
+                            </label>
+                            <label>
+                                State
+                                <select name="state" value={savedProfile.state} onChange={onChange}>
+                                    <option value="">Select state</option>
+                                    {STATE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </label>
+                            <label>
+                                City
+                                <select name="city" value={savedProfile.city} onChange={onChange} disabled={!savedProfile.state}>
+                                    <option value="">Select city</option>
+                                    {cityOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </label>
+                            <label>
+                                Business type
+                                <select name="businessType" value={savedProfile.businessType} onChange={onChange}>
+                                    {Object.keys(PRODUCT_OPTIONS).map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </label>
+                            <label>
+                                Product type
+                                <select name="productType" value={savedProfile.productType} onChange={onChange}>
+                                    {selectedProductOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div className="company-profile-actions">
+                        <button type="button" className="secondary-button" onClick={onSkip}>Skip now</button>
+                        <button type="submit" className="primary-button">Save & continue</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
 }
 
 function AuthPathChooser({ authMode = "", registrationIntent = "owner", onSelect, standalone = false }) {
@@ -302,10 +474,13 @@ function App() {
     const [authError, setAuthError] = useState("");
     const [authMode, setAuthMode] = useState("login");
     const [authForm, setAuthForm] = useState(initialAuthForm);
+    const [profileSetupForm, setProfileSetupForm] = useState(initialProfileSetupForm);
+    const [companyProfileSetupOpen, setCompanyProfileSetupOpen] = useState(false);
     const [authMessage, setAuthMessage] = useState("");
     const [authSubmitting, setAuthSubmitting] = useState(false);
     const [landingView, setLandingView] = useState("landing");
     const [authDialogOpen, setAuthDialogOpen] = useState(false);
+    const profileSetupSnapshotRef = useRef(initialProfileSetupForm);
     const [entryChooserRequest, setEntryChooserRequest] = useState(0);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [identityState, setIdentityState] = useState({ status: "idle", identities: [], error: "" });
@@ -480,15 +655,70 @@ function App() {
         }
 
         const companies = getUserCompanies(user);
+
         let persistedCompanyId = null;
         try {
             persistedCompanyId = window.sessionStorage.getItem(ACTIVE_COMPANY_STORAGE_KEY);
         } catch {
             persistedCompanyId = null;
         }
-        const selectedCompany = companies.find(company => String(company.companyId) === String(persistedCompanyId)) || companies[0] || null;
+        const selectedCompany = companies.find(company => String(resolveCompanyId(company)) === String(persistedCompanyId)) || companies[0] || null;
         setActiveCompany(toActiveCompany(selectedCompany));
     }, [user]);
+
+    useEffect(() => {
+        if (!user || !companyProfileSetupOpen || !resolveCompanyId(activeCompany)) return;
+
+        async function loadCompanyProfile() {
+            let storedProfile = {};
+            try {
+                storedProfile = JSON.parse(window.localStorage.getItem(`financial-company-profile:${user.userId || user.email || "guest"}`) || "null") || {};
+            } catch {
+                storedProfile = {};
+            }
+
+            try {
+                const result = await requestJson(`/auth/profile?companyId=${encodeURIComponent(activeCompany?.companyId || "")}`);
+                const profile = result.profile || {};
+                const selectedBusinessType = profile.businessType || storedProfile.businessType || "Trader";
+                const nextCompanyName = String(profile.companyName || activeCompany?.companyName || storedProfile.companyName || authForm.companyName || "").trim();
+                const nextProfile = {
+                    companyName: nextCompanyName,
+                    constitution: profile.constitution || storedProfile.constitution || "Proprietorship",
+                    kyc: profile.kyc || storedProfile.kyc || "PAN",
+                    kycValue: profile.kycValue || storedProfile.kycValue || "",
+                    email: profile.email || storedProfile.email || user.email || authForm.email || "",
+                    contactNumber: profile.contactNumber || storedProfile.contactNumber || "",
+                    city: profile.city || storedProfile.city || "",
+                    state: profile.state || storedProfile.state || "",
+                    businessType: selectedBusinessType,
+                    productType: profile.productType || storedProfile.productType || (PRODUCT_OPTIONS[selectedBusinessType] || PRODUCT_OPTIONS.Trader)[0],
+                };
+                setProfileSetupForm(nextProfile);
+                profileSetupSnapshotRef.current = nextProfile;
+                return;
+            } catch {
+                const selectedBusinessType = storedProfile.businessType || "Trader";
+                const nextCompanyName = String(activeCompany?.companyName || storedProfile.companyName || authForm.companyName || "").trim();
+                const nextProfile = {
+                    companyName: nextCompanyName,
+                    constitution: storedProfile.constitution || "Proprietorship",
+                    kyc: storedProfile.kyc || "PAN",
+                    kycValue: storedProfile.kycValue || "",
+                    email: storedProfile.email || user.email || authForm.email || "",
+                    contactNumber: storedProfile.contactNumber || "",
+                    city: storedProfile.city || "",
+                    state: storedProfile.state || "",
+                    businessType: selectedBusinessType,
+                    productType: storedProfile.productType || (PRODUCT_OPTIONS[selectedBusinessType] || PRODUCT_OPTIONS.Trader)[0],
+                };
+                setProfileSetupForm(nextProfile);
+                profileSetupSnapshotRef.current = nextProfile;
+            }
+        }
+
+        loadCompanyProfile();
+    }, [activeCompany?.companyId, activeCompany?.companyName, authForm.companyName, authForm.email, companyProfileSetupOpen, user]);
 
     useEffect(() => {
         if (!user || !activeCompany) return;
@@ -500,7 +730,8 @@ function App() {
     }, [activeCompany, user]);
 
     useEffect(() => {
-        if (!authLoading && window.location.pathname.startsWith("/admin") && (!user || user.role !== "admin")) {
+        const isAdminRoute = window.location.pathname.toLowerCase().startsWith("/admin");
+        if (!authLoading && isAdminRoute && (!user || user.role !== "admin")) {
             window.location.replace("/");
         }
     }, [authLoading, user]);
@@ -583,9 +814,127 @@ function App() {
         });
     }
 
+    function updateProfileSetupField(event) {
+        const { name, value } = event.target;
+        if (!name) return;
+
+        setProfileSetupForm(current => {
+            if (name === "businessType") {
+                const nextOptions = PRODUCT_OPTIONS[value] || PRODUCT_OPTIONS.Trader;
+                return { ...current, businessType: value, productType: nextOptions[0] || "" };
+            }
+
+            if (name === "kyc") {
+                return { ...current, kyc: value, kycValue: "" };
+            }
+
+            return { ...current, [name]: value };
+        });
+    }
+
+    function openCompanyProfileSetup() {
+        setAuthMessage("");
+
+        const normalizedCompanies = Array.isArray(user?.companies) ? user.companies.map(company => toActiveCompany(company)).filter(Boolean) : [];
+        const nextCompany = activeCompany || normalizedCompanies[0] || null;
+        if (nextCompany && !activeCompany) {
+            setActiveCompany(nextCompany);
+        }
+
+        const nextProfile = {
+            companyName: String(profileSetupForm.companyName || nextCompany?.companyName || authForm.companyName || "").trim(),
+            constitution: profileSetupForm.constitution || "Proprietorship",
+            kyc: profileSetupForm.kyc || "PAN",
+            kycValue: profileSetupForm.kycValue || "",
+            email: profileSetupForm.email || user?.email || authForm.email || "",
+            contactNumber: profileSetupForm.contactNumber || "",
+            city: profileSetupForm.city || "",
+            state: profileSetupForm.state || "",
+            businessType: profileSetupForm.businessType || "Trader",
+            productType: profileSetupForm.productType || (PRODUCT_OPTIONS.Trader || [])[0] || "",
+        };
+
+        setProfileSetupForm(nextProfile);
+        profileSetupSnapshotRef.current = nextProfile;
+
+        setLandingView("profile");
+        setCompanyProfileSetupOpen(true);
+    }
+
+    function handleSkipProfileSetup() {
+        setAuthMessage("");
+        setProfileSetupForm(profileSetupSnapshotRef.current || initialProfileSetupForm);
+        setLandingView("landing");
+        setCompanyProfileSetupOpen(false);
+        setActiveSection("#dashboard");
+        if (typeof window !== "undefined") {
+            window.location.hash = "#dashboard";
+        }
+    }
+
+    async function handleCompanyProfileSubmit(event) {
+        event.preventDefault();
+        const companyName = String(profileSetupForm.companyName ?? "").trim();
+        if (!companyName) {
+            setAuthMessage("Company name is required.");
+            return;
+        }
+
+        const selectedCompanyId = resolveCompanyId(activeCompany) || resolveCompanyId(profileSetupForm) || (Array.isArray(user?.companies) ? user.companies.map(company => resolveCompanyId(company)).find(Boolean) : null);
+        if (!selectedCompanyId) {
+            setAuthMessage("Select a company workspace before saving the profile.");
+            return;
+        }
+
+        const fullProfile = {
+            ...profileSetupForm,
+            companyName,
+            companyId: selectedCompanyId,
+            kycValue: String(profileSetupForm.kycValue ?? "").trim(),
+        };
+
+        setAuthMessage("");
+        try {
+            const result = await requestJson('/auth/profile', {
+                method: "PUT",
+                body: JSON.stringify(fullProfile),
+            });
+            const storedProfile = result.profile || fullProfile;
+            const refreshedUser = result.user ? mergeProfileIntoUser(user, { ...storedProfile, ...result.user }, selectedCompanyId) : mergeProfileIntoUser(user, storedProfile, selectedCompanyId);
+            setUser(refreshedUser);
+            setActiveCompany(current => current ? {
+                ...current,
+                companyName: storedProfile.companyName || current.companyName || "",
+                cin: storedProfile.cin || current.cin || "",
+                pan: storedProfile.pan || current.pan || "",
+            } : current);
+            setProfileSetupForm(storedProfile);
+            profileSetupSnapshotRef.current = storedProfile;
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(`financial-company-profile:${user?.userId || user?.email || "guest"}`, JSON.stringify(storedProfile));
+            }
+            setLandingView("landing");
+            setCompanyProfileSetupOpen(false);
+            setActiveSection("#dashboard");
+            if (typeof window !== "undefined") {
+                window.location.hash = "#dashboard";
+            }
+        } catch (error) {
+            setAuthMessage(error.message || "Unable to save company profile.");
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(`financial-company-profile:${user?.userId || user?.email || "guest"}`, JSON.stringify(fullProfile));
+            }
+        }
+    }
+
     async function handleAuthSubmit(event) {
         event.preventDefault();
         if (authSubmitting) {
+            return;
+        }
+
+        if (authMode === "register" && authForm.registrationIntent === "owner" && !String(authForm.companyName ?? "").trim()) {
+            setAuthMessage("Company name is required.");
             return;
         }
 
@@ -602,6 +951,24 @@ function App() {
             setUser(result.user);
             setAuthDialogOpen(false);
             setAuthForm(initialAuthForm);
+            if (authMode === "register" && authForm.registrationIntent === "owner") {
+                const nextProfile = {
+                    companyName: String(authForm.companyName ?? "").trim(),
+                    constitution: "Proprietorship",
+                    kyc: "PAN",
+                    kycValue: "",
+                    email: String(authForm.email ?? "").trim(),
+                    contactNumber: "",
+                    city: "",
+                    state: "",
+                    businessType: "Trader",
+                    productType: PRODUCT_OPTIONS.Trader[0],
+                };
+                setProfileSetupForm(nextProfile);
+                profileSetupSnapshotRef.current = nextProfile;
+                setLandingView("profile");
+                setCompanyProfileSetupOpen(true);
+            }
         } catch (error) {
             setAuthMessage(error.message);
         } finally {
@@ -739,6 +1106,10 @@ function App() {
         return <div className="app auth-loading"><div className="loading-card"><StatusMessage message={authError} tone="error" persist /></div></div>;
     }
 
+    if (shouldShowCompanyProfileSetup({ user, companyProfileSetupOpen, landingView })) {
+        return <CompanyProfileSetup savedProfile={profileSetupForm} onChange={updateProfileSetupField} onSubmit={handleCompanyProfileSubmit} onSkip={handleSkipProfileSetup} />;
+    }
+
     if (!user) {
         if (landingView === "landing") {
             return (
@@ -840,7 +1211,8 @@ function App() {
         );
     }
 
-    if (window.location.pathname.startsWith("/admin")) {
+    const isAdminRoute = window.location.pathname.toLowerCase().startsWith("/admin");
+    if (isAdminRoute) {
         if (user.role !== "admin") {
             return <div className="app auth-loading"><div className="loading-card"><StatusMessage message="Admin access required." tone="error" persist /></div></div>;
         }
@@ -1018,8 +1390,8 @@ function App() {
     }
 
     function handleCompanySelect(companyId) {
-        const company = companies.find(item => String(item.companyId) === String(companyId));
-        if (!company || String(activeCompany?.companyId) === String(company.companyId)) return;
+        const company = companies.find(item => String(resolveCompanyId(item)) === String(companyId));
+        if (!company || String(resolveCompanyId(activeCompany)) === String(resolveCompanyId(company))) return;
         setActiveCompany(toActiveCompany(company));
         setSelectedFiles([]);
         setIdentityState({ status: "idle", identities: [], error: "" });
@@ -1081,8 +1453,9 @@ function App() {
                     <button className={`mobile-menu ${mobileNavOpen ? "is-open" : ""}`} onClick={() => setMobileNavOpen(open => !open)} aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"} title={mobileNavOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileNavOpen}><span className="hamburger-icon" aria-hidden="true"><span /><span /><span /></span></button>
                                         <div>{activeCompany ? <span className="topbar-kicker">Workspace / {activeCompany.companyName}</span> : <span className="topbar-kicker">Account overview</span>}<h1>{activeCompany ? "Dashboard" : `Welcome, ${firstName}`}</h1></div>
                     <div className="topbar-actions">
-                        <button className="theme-toggle" onClick={() => setDarkMode(mode => !mode)} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={darkMode}><span className="theme-toggle-icon" aria-hidden="true">{darkMode ? "☀" : "◐"}</span><span>{darkMode ? "Light mode" : "Dark mode"}</span></button>
-                        <div className="account-controls"><div className="avatar" title={`${user.userName || "Account"}${user.email ? ` - ${user.email}` : ""}`} aria-label={`${user.userName || "Account"}${user.email ? `, ${user.email}` : ""}`}>{String(user.userName || "U").slice(0, 1).toUpperCase()}</div><div className="account-copy"><strong>{user.userName}</strong><span>{user.email}</span></div><button onClick={handleLogout} className="logout-button">Log out</button></div>
+                        <button type="button" className="topbar-button profile-button" onClick={openCompanyProfileSetup}>Edit profile</button>
+                        <button className="topbar-button theme-toggle" onClick={() => setDarkMode(mode => !mode)} aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"} aria-pressed={darkMode}><span className="theme-toggle-icon" aria-hidden="true">{darkMode ? "☀" : "◐"}</span><span>{darkMode ? "Light mode" : "Dark mode"}</span></button>
+                        <button onClick={handleLogout} className="topbar-button logout-button">Log out</button>
                     </div>
                 </header>
                 <div className="content-grid" id="dashboard">
