@@ -680,19 +680,22 @@ function App() {
             try {
                 const result = await requestJson(`/auth/profile?companyId=${encodeURIComponent(activeCompany?.companyId || "")}`);
                 const profile = result.profile || {};
-                const selectedBusinessType = profile.businessType || storedProfile.businessType || "Trader";
-                const nextCompanyName = String(profile.companyName || activeCompany?.companyName || storedProfile.companyName || authForm.companyName || "").trim();
+                const profileValue = (key, fallback = "") => Object.prototype.hasOwnProperty.call(profile, key)
+                    ? (profile[key] ?? "")
+                    : fallback;
+                const selectedBusinessType = profileValue("businessType", storedProfile.businessType || "Trader");
+                const nextCompanyName = String(profileValue("companyName", activeCompany?.companyName || storedProfile.companyName || authForm.companyName || "")).trim();
                 const nextProfile = {
                     companyName: nextCompanyName,
-                    constitution: profile.constitution || storedProfile.constitution || "Proprietorship",
-                    kyc: profile.kyc || storedProfile.kyc || "PAN",
-                    kycValue: profile.kycValue || storedProfile.kycValue || "",
-                    email: profile.email || storedProfile.email || user.email || authForm.email || "",
-                    contactNumber: profile.contactNumber || storedProfile.contactNumber || "",
-                    city: profile.city || storedProfile.city || "",
-                    state: profile.state || storedProfile.state || "",
+                    constitution: profileValue("constitution", storedProfile.constitution || "Proprietorship"),
+                    kyc: profileValue("kyc", storedProfile.kyc || "PAN"),
+                    kycValue: profileValue("kycValue", storedProfile.kycValue || ""),
+                    email: profileValue("email", storedProfile.email || user.email || authForm.email || ""),
+                    contactNumber: profileValue("contactNumber", storedProfile.contactNumber || ""),
+                    city: profileValue("city", storedProfile.city || ""),
+                    state: profileValue("state", storedProfile.state || ""),
                     businessType: selectedBusinessType,
-                    productType: profile.productType || storedProfile.productType || (PRODUCT_OPTIONS[selectedBusinessType] || PRODUCT_OPTIONS.Trader)[0],
+                    productType: profileValue("productType", storedProfile.productType || (PRODUCT_OPTIONS[selectedBusinessType] || PRODUCT_OPTIONS.Trader)[0]),
                 };
                 setProfileSetupForm(nextProfile);
                 profileSetupSnapshotRef.current = nextProfile;
