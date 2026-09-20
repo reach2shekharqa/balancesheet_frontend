@@ -331,7 +331,7 @@ function RegistrationFields({ authForm, onChange }) {
         </div> : null;
 }
 
-export function CompanyProfileSetup({ savedProfile, onChange, onSubmit, onSkip }) {
+export function CompanyProfileSetup({ savedProfile, message, onChange, onSubmit, onSkip }) {
     const selectedProductOptions = PRODUCT_OPTIONS[savedProfile.businessType] || PRODUCT_OPTIONS.Trader;
     const cityOptions = savedProfile.state ? [...(STATE_CITY_MAP[savedProfile.state] || [])].sort((a, b) => a.localeCompare(b, "en-IN")) : [];
     const kycFieldLabel = KYC_FIELD_LABELS[savedProfile.kyc] || "KYC number";
@@ -407,6 +407,7 @@ export function CompanyProfileSetup({ savedProfile, onChange, onSubmit, onSkip }
                         </div>
                     </div>
 
+                    <StatusMessage message={message} tone="error" persist />
                     <div className="company-profile-actions">
                         <button type="button" className="secondary-button" onClick={onSkip}>Skip now</button>
                         <button type="submit" className="primary-button">Save & continue</button>
@@ -687,6 +688,8 @@ function App() {
                 const nextCompanyName = String(profileValue("companyName", activeCompany?.companyName || storedProfile.companyName || authForm.companyName || "")).trim();
                 const nextProfile = {
                     companyName: nextCompanyName,
+                    cin: profileValue("cin", activeCompany?.cin || ""),
+                    pan: profileValue("pan", activeCompany?.pan || ""),
                     constitution: profileValue("constitution", storedProfile.constitution || "Proprietorship"),
                     kyc: profileValue("kyc", storedProfile.kyc || "PAN"),
                     kycValue: profileValue("kycValue", storedProfile.kycValue || ""),
@@ -699,12 +702,20 @@ function App() {
                 };
                 setProfileSetupForm(nextProfile);
                 profileSetupSnapshotRef.current = nextProfile;
+                setActiveCompany(current => current ? {
+                    ...current,
+                    companyName: nextProfile.companyName,
+                    cin: nextProfile.cin,
+                    pan: nextProfile.pan,
+                } : current);
                 return;
             } catch {
                 const selectedBusinessType = storedProfile.businessType || "Trader";
                 const nextCompanyName = String(activeCompany?.companyName || storedProfile.companyName || authForm.companyName || "").trim();
                 const nextProfile = {
                     companyName: nextCompanyName,
+                    cin: storedProfile.cin || activeCompany?.cin || "",
+                    pan: storedProfile.pan || activeCompany?.pan || "",
                     constitution: storedProfile.constitution || "Proprietorship",
                     kyc: storedProfile.kyc || "PAN",
                     kycValue: storedProfile.kycValue || "",
@@ -717,6 +728,12 @@ function App() {
                 };
                 setProfileSetupForm(nextProfile);
                 profileSetupSnapshotRef.current = nextProfile;
+                setActiveCompany(current => current ? {
+                    ...current,
+                    companyName: nextProfile.companyName,
+                    cin: nextProfile.cin,
+                    pan: nextProfile.pan,
+                } : current);
             }
         }
 
@@ -898,7 +915,13 @@ function App() {
                 method: "PUT",
                 body: JSON.stringify(fullProfile),
             });
-            const storedProfile = result.profile || fullProfile;
+            const responseCompany = result.user?.companies?.find(company => String(resolveCompanyId(company)) === String(selectedCompanyId));
+            const storedProfile = {
+                ...fullProfile,
+                ...(result.profile || {}),
+                cin: result.profile?.cin ?? responseCompany?.cin ?? fullProfile.cin ?? "",
+                pan: result.profile?.pan ?? responseCompany?.pan ?? fullProfile.pan ?? "",
+            };
             const refreshedUser = result.user ? mergeProfileIntoUser(user, { ...storedProfile, ...result.user }, selectedCompanyId) : mergeProfileIntoUser(user, storedProfile, selectedCompanyId);
             setUser(refreshedUser);
             setActiveCompany(current => current ? {
@@ -1106,7 +1129,7 @@ function App() {
     }
 
     if (shouldShowCompanyProfileSetup({ user, companyProfileSetupOpen, landingView })) {
-        return <CompanyProfileSetup savedProfile={profileSetupForm} onChange={updateProfileSetupField} onSubmit={handleCompanyProfileSubmit} onSkip={handleSkipProfileSetup} />;
+        return <CompanyProfileSetup savedProfile={profileSetupForm} message={authMessage} onChange={updateProfileSetupField} onSubmit={handleCompanyProfileSubmit} onSkip={handleSkipProfileSetup} />;
     }
 
     if (!user) {
