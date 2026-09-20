@@ -1,6 +1,6 @@
 import { memo } from "react";
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getValidYears, isComponentRow, numericValue } from "../utils/analyticsData";
+import { displayLabel, getAnalyticsSections, getSectionRows, getValueForPeriod, isChartRow } from "../utils/analyticsData";
 
 const RING_COLORS = [
     "#2b6f9f",
@@ -15,29 +15,10 @@ const RING_COLORS = [
     "#aa7c9c",
 ];
 
-function AssetsBreakdownChart({ analyticsData, selectedYear = null, assetScope = "non-current" }) {
-    const validYears = getValidYears(analyticsData);
+function AssetsBreakdownChart({ analyticsData, selectedYear = null, sectionId = null }) {
+    const validYears = (analyticsData?.years ?? []).map(String);
     const latestYear = selectedYear ?? validYears[0];
-
-    function matchesAssetSection(value) {
-        const normalizedSection = displayLabel(value)
-            .replace(/\s+/g, " ")
-            .trim()
-            .toLowerCase();
-
-        if (assetScope === "current") {
-            return /\bcurrent\s+assets?\b/.test(normalizedSection) && !/\bnon[- ]?current\s+assets?\b/.test(normalizedSection);
-        }
-
-        return /\bnon[- ]?current\s+assets?\b/.test(normalizedSection);
-    }
-
-    function getRowValue(row) {
-        const values = row.values ?? {};
-        const matchingYear = Object.keys(values).find(year => String(year) === String(latestYear))
-            ?? Object.keys(values).find(year => String(year).includes(String(latestYear ?? "")));
-        return numericValue(values[matchingYear]);
-    }
+    const selectedSectionId = sectionId ?? getAnalyticsSections(analyticsData)[0]?.id;
 
     if (!analyticsData?.dataset) {
         return (
@@ -47,23 +28,20 @@ function AssetsBreakdownChart({ analyticsData, selectedYear = null, assetScope =
         );
     }
 
-    const chartData = analyticsData.dataset
-        .filter(row => isComponentRow(row) || row?.role === "tax")
-        .filter(row => {
-            const sectionNames = [row.section, row.sourceSection, row.sourceRowSection]
-                .filter(Boolean)
-            return sectionNames.some(matchesAssetSection);
-        })
+    const chartData = getSectionRows(analyticsData, selectedSectionId)
+        .filter(isChartRow)
         .map(row => ({
             name: displayLabel(row.label),
-            rawValue: getRowValue(row),
+            rawValue: getValueForPeriod(row, latestYear),
             section: displayLabel(row.section ?? row.sourceSection ?? "Other assets"),
+            statementOrder: row.statementOrder ?? row.rowIndex ?? 0,
         }))
         .filter(item => item.name && Number.isFinite(item.rawValue))
         .map(item => ({
             ...item,
             value: Math.abs(item.rawValue),
         }))
+        .sort((first, second) => first.statementOrder - second.statementOrder)
         .map((item, index) => ({
             ...item,
             shortName: item.name.length > 18 ? `${item.name.slice(0, 15)}...` : item.name,
@@ -115,7 +93,7 @@ function AssetsBreakdownChart({ analyticsData, selectedYear = null, assetScope =
                     color: "#fff",
                     fontSize: 10,
                     fontWeight: 600,
-                    formatter: params => params.data.shortName,
+                    formatter: params => params.data.value > 0 ? params.data.shortName : "",
                 },
                 labelLine: { show: false },
                 emphasis: {

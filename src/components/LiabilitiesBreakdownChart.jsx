@@ -1,6 +1,6 @@
 import { memo } from "react";
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getValidYears, isPieComponent, numericValue } from "../utils/analyticsData";
+import { displayLabel, getAnalyticsSections, getSectionRows, getValueForPeriod, isChartRow } from "../utils/analyticsData";
 
 const RING_COLORS = [
     "#2b6f9f",
@@ -15,49 +15,29 @@ const RING_COLORS = [
     "#aa7c9c",
 ];
 
-function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null, liabilityScope = "current" }) {
+function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null, sectionId = null }) {
     if (!analyticsData?.dataset) {
         return <p>No liabilities data available to display.</p>;
     }
 
-    const validYears = getValidYears(analyticsData);
+    const validYears = (analyticsData?.years ?? []).map(String);
     const latestYear = selectedYear ?? validYears[0];
+    const selectedSectionId = sectionId ?? getAnalyticsSections(analyticsData)[0]?.id;
 
-    function matchesLiabilitySection(value) {
-        const normalizedSection = displayLabel(value)
-            .replace(/\s+/g, " ")
-            .trim()
-            .toLowerCase();
-
-        if (liabilityScope === "current") {
-            return /\bcurrent\s+liabilities?\b/.test(normalizedSection) && !/\bnon[- ]?current\s+liabilities?\b/.test(normalizedSection);
-        }
-
-        return /\bnon[- ]?current\s+liabilities?\b/.test(normalizedSection);
-    }
-
-    function getRowValue(row) {
-        const values = row.values ?? {};
-        const matchingYear = Object.keys(values).find(year => String(year) === String(latestYear))
-            ?? Object.keys(values).find(year => String(year).includes(String(latestYear ?? "")));
-        return numericValue(values[matchingYear]);
-    }
-
-    const chartData = analyticsData.dataset
-        .filter(row => isPieComponent(row) || row?.role === "tax")
-        .filter(row => [row.section, row.sourceSection, row.sourceRowSection]
-            .filter(Boolean)
-            .some(matchesLiabilitySection))
+    const chartData = getSectionRows(analyticsData, selectedSectionId)
+        .filter(isChartRow)
         .map(row => ({
             name: displayLabel(row.label),
-            rawValue: getRowValue(row),
+            rawValue: getValueForPeriod(row, latestYear),
             section: displayLabel(row.section ?? row.sourceSection ?? "Other liabilities"),
+            statementOrder: row.statementOrder ?? row.rowIndex ?? 0,
         }))
         .filter(item => item.name && Number.isFinite(item.rawValue))
         .map(item => ({
             ...item,
             value: Math.abs(item.rawValue),
         }))
+        .sort((first, second) => first.statementOrder - second.statementOrder)
         .map((item, index) => ({
             ...item,
             shortName: item.name.length > 18 ? `${item.name.slice(0, 15)}...` : item.name,

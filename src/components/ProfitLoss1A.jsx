@@ -3,6 +3,7 @@ import { useState } from "react";
 import ProfitLossExpensesChart from "./ProfitLossExpensesChart";
 import MultiPeriodComparisonChart from "./MultiPeriodComparisonChart";
 import { deriveFinancialPeriods } from "../utils/financialStatementData";
+import { getAnalyticsSections } from "../utils/analyticsData";
 import { getAnalyticsTab } from "../config/analyticsTabs.config";
 
 function ProfitLoss1A({ analyticsData, loading = false }) {
@@ -10,6 +11,11 @@ function ProfitLoss1A({ analyticsData, loading = false }) {
     const periods = deriveFinancialPeriods(analyticsData);
     const [selectedPeriod, setSelectedPeriod] = useState(null);
     const [activeView, setActiveView] = useState("comparison");
+    const [sectionId, setSectionId] = useState(null);
+    const sections = getAnalyticsSections(analyticsData);
+    const activeSectionId = sections.some(section => section.id === sectionId)
+        ? sectionId
+        : sections[0]?.id;
     const displayedPeriod = periods.includes(selectedPeriod) ? selectedPeriod : periods[0] ?? null;
 
     if (loading) {
@@ -54,7 +60,10 @@ function ProfitLoss1A({ analyticsData, loading = false }) {
                 </section>
             ) : (
                 <section className="chart-panel" aria-label={`Expenses for ${displayedPeriod}`}>
-                    <ProfitLossExpensesChart analyticsData={analyticsData} selectedYear={displayedPeriod} />
+                    <div className="analytics-tabs profit-loss-1a-tabs" role="tablist" aria-label="Profit and loss sections">
+                        {sections.map(section => <button key={section.id} className={activeSectionId === section.id ? "is-active" : ""} onClick={() => setSectionId(section.id)} role="tab" aria-selected={activeSectionId === section.id}>{section.label}</button>)}
+                    </div>
+                    <ProfitLossExpensesChart analyticsData={analyticsData} selectedYear={displayedPeriod} sectionId={activeSectionId} />
                 </section>
             )}
         </section>

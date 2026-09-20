@@ -1,81 +1,37 @@
 import { memo } from "react";
 import ReactECharts from "echarts-for-react";
-import { displayLabel, getExpenseBreakdownRows, getValidYears, numericValue } from "../utils/analyticsData";
+import { displayLabel, getAnalyticsSections, getSectionRows, getValueForPeriod, isChartRow } from "../utils/analyticsData";
 
-function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
-    console.log("[ExpenseChart VERSION] expense-resolver-debug-v2");
-    const years = getValidYears(analyticsData);
+function ProfitLossExpensesChart({ analyticsData, selectedYear = null, sectionId = null }) {
+    const years = (analyticsData?.years ?? []).map(String);
     const displayedYear = selectedYear ?? years[0] ?? null;
+    const selectedSectionId = sectionId ?? getAnalyticsSections(analyticsData)[0]?.id;
 
     if (!analyticsData?.dataset || !displayedYear) {
-        return <div className="chart-empty"><strong>Expense data unavailable</strong><p>The selected report does not include a profit and loss period.</p></div>;
+        return <div className="chart-empty"><strong>Profit and loss data unavailable</strong><p>The selected report does not include a reporting period.</p></div>;
     }
 
-    const rowsBeforeFilter = analyticsData.dataset;
-    console.log("EXPENSE BREAKDOWN ROWS BEFORE FILTER", rowsBeforeFilter.map(row => ({
-        metric: row.metric,
-        name: row.label,
-        value: row.values,
-        role: row.role,
-        sourceSection: row.sourceSection,
-        section: row.section,
-        statement: row.statement,
-        sourceTableStatement: row.sourceTableStatement
-    })));
-    const resolvedExpenseRows = getExpenseBreakdownRows(rowsBeforeFilter);
-    const expenseRows = resolvedExpenseRows
+    const expenseRows = getSectionRows(analyticsData, selectedSectionId)
+        .filter(isChartRow)
         .map(row => ({
             name: displayLabel(row.label),
-            value: numericValue(row.values?.[displayedYear]),
+            value: getValueForPeriod(row, displayedYear),
+            statementOrder: row.statementOrder ?? row.rowIndex ?? 0,
         }))
-        .filter(item => Number.isFinite(item.value));
-
-    console.log("EXPENSE BREAKDOWN DEBUG", {
-        backendExpenseRows: analyticsData.metrics
-            ? Object.values(analyticsData.metrics).filter(metric => metric.role === "detail" && /expense/i.test(String(metric.sourceSection ?? metric.section ?? ""))).length
-            : "unknown",
-        frontendRowsBeforeFilter: rowsBeforeFilter.length,
-        expenseRowsAfterFilter: expenseRows.length,
-        excludedRows: rowsBeforeFilter.filter(row => !getExpenseBreakdownRows([row]).length).map(row => row.label)
-    });
+        .filter(item => item.name && Number.isFinite(item.value))
+        .sort((first, second) => first.statementOrder - second.statementOrder);
 
     const chartData = expenseRows
         .map(item => ({ ...item, value: Math.abs(item.value) }))
-        .filter(item => item.value > 0);
+        .filter(item => item.value >= 0);
 
     const emptyStateCondition = chartData.length === 0;
-    console.log("[ExpenseChart LIVE]", {
-        analyticsDataExists: Boolean(analyticsData),
-        analyticsDataKeys: Object.keys(analyticsData ?? {}),
-        rawRowsCount: rowsBeforeFilter.length,
-        resolvedExpenseRowsCount: resolvedExpenseRows.length,
-        resolvedExpenseRows: resolvedExpenseRows.map(row => ({
-            name: row.name ?? row.label,
-            currentPeriod: row.currentPeriod,
-            previousPeriod: row.previousPeriod,
-            currentYear: row.currentYear,
-            previousYear: row.previousYear,
-            value: row.value,
-            values: row.values,
-            year: row.year,
-        })),
-        chartDataCount: chartData.length,
-        emptyStateCondition,
-    });
 
     if (emptyStateCondition) {
-        return <div className="chart-empty"><strong>No expense lines found</strong><p>The report contains a profit and loss statement, but no itemized expense values were detected.</p></div>;
+        return <div className="chart-empty"><strong>No rows found</strong><p>The selected report section has no itemized values for this period.</p></div>;
     }
 
     const option = {
-        title: {
-            text: `Expenses: ${displayedYear} Breakdown`,
-            subtext: "Profit & loss expense composition",
-            left: 20,
-            top: 18,
-            textStyle: { fontSize: 17, fontWeight: 700, color: "#17212b" },
-            subtextStyle: { color: "#71808e", fontSize: 12 },
-        },
         tooltip: {
             trigger: "item",
             formatter: params => `${params.name}<br/>${Number(params.value).toLocaleString()} (${params.percent}%)`,
@@ -88,14 +44,11 @@ function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
             height: 260,
             width: 290,
             itemGap: 10,
-            formatter: value => {
-                const item = chartData.find(chartItem => chartItem.name === value);
-                return item ? `${displayLabel(value)}: ${Number(item.value).toLocaleString()}` : displayLabel(value);
-            },
+            formatter: value => displayLabel(value),
             textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
         series: [{
-            name: `${displayedYear} expenses`,
+            name: `${displayedYear} statement`,
             type: "pie",
             radius: ["35%", "68%"],
             center: ["70%", "56%"],
@@ -107,7 +60,6 @@ function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
         media: [{
             query: { maxWidth: 700 },
             option: {
-                title: { left: 12, top: 12, text: "Expense breakdown", subtext: "Expense composition", textStyle: { fontSize: 14 }, subtextStyle: { fontSize: 10 } },
                 legend: { left: 12, right: 12, top: "60%", width: undefined, height: 150, orient: "vertical", type: "scroll", itemGap: 6, textStyle: { fontSize: 10, width: 250 } },
                 series: [{ center: ["50%", "34%"], radius: ["23%", "43%"] }],
             },

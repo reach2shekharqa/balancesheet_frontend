@@ -96,3 +96,35 @@ export function displayLabel(label) {
     .replace(/^(?:\s*(?:\(\s*[a-z0-9]+\s*\)|[a-z0-9]+\s*[.)]))+\s*/i, "")
         .trim();
 }
+
+export function getAnalyticsSections(analyticsData) {
+    return (analyticsData?.sections ?? [])
+        .map((section, index) => ({
+            id: section.sectionId ?? `section-${index}`,
+            label: displayLabel(section.section ?? `Section ${index + 1}`),
+            order: index,
+        }))
+        .filter(section => section.label);
+}
+
+export function getSectionRows(analyticsData, sectionId) {
+    return (analyticsData?.dataset ?? []).filter(row => row.sourceSectionId === sectionId);
+}
+
+export function isChartRow(row) {
+    return ![
+        "sectionTotal",
+        "statementTotal",
+        "subtotal",
+        "aggregate",
+        "result",
+        "unknown"
+    ].includes(row?.role);
+}
+
+export function getValueForPeriod(row, period) {
+    const values = row?.values ?? {};
+    const matchingPeriod = Object.keys(values).find(key => String(key) === String(period))
+        ?? Object.keys(values).find(key => String(key).includes(String(period ?? "")));
+    return numericValue(values[matchingPeriod]);
+}

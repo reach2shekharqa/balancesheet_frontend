@@ -4,6 +4,7 @@ import AssetsBreakdownChart from "./AssetsBreakdownChart";
 import LiabilitiesBreakdownChart from "./LiabilitiesBreakdownChart";
 import BalanceSheetComparison from "./BalanceSheetComparison";
 import { deriveFinancialPeriods } from "../utils/financialStatementData";
+import { getAnalyticsSections } from "../utils/analyticsData";
 import { getAnalyticsTab } from "../config/analyticsTabs.config";
 
 function BalanceSheet1A({ assets, liabilities, profitLoss, keyMetrics, loading = false }) {
@@ -11,8 +12,16 @@ function BalanceSheet1A({ assets, liabilities, profitLoss, keyMetrics, loading =
     const periods = deriveFinancialPeriods(assets, liabilities);
     const [selectedPeriod, setSelectedPeriod] = useState(null);
     const [activeView, setActiveView] = useState("comparison");
-    const [assetScope, setAssetScope] = useState("current");
-    const [liabilityScope, setLiabilityScope] = useState("current");
+    const [assetSectionId, setAssetSectionId] = useState(null);
+    const [liabilitySectionId, setLiabilitySectionId] = useState(null);
+    const assetSections = getAnalyticsSections(assets);
+    const liabilitySections = getAnalyticsSections(liabilities);
+    const activeAssetSectionId = assetSections.some(section => section.id === assetSectionId)
+        ? assetSectionId
+        : assetSections[0]?.id;
+    const activeLiabilitySectionId = liabilitySections.some(section => section.id === liabilitySectionId)
+        ? liabilitySectionId
+        : liabilitySections[0]?.id;
     const displayedPeriod = periods.includes(selectedPeriod) ? selectedPeriod : periods[0] ?? null;
 
     if (loading) {
@@ -50,18 +59,16 @@ function BalanceSheet1A({ assets, liabilities, profitLoss, keyMetrics, loading =
             ) : activeView === "assets" ? (
                 <section className="chart-panel" aria-label={`Assets for ${displayedPeriod}`}>
                     <div className="analytics-tabs balance-sheet-1a-tabs" role="tablist" aria-label="Asset sections">
-                        <button className={assetScope === "non-current" ? "is-active" : ""} onClick={() => setAssetScope("non-current")} role="tab" aria-selected={assetScope === "non-current"}>Non-current assets</button>
-                        <button className={assetScope === "current" ? "is-active" : ""} onClick={() => setAssetScope("current")} role="tab" aria-selected={assetScope === "current"}>Current assets</button>
+                        {assetSections.map(section => <button key={section.id} className={activeAssetSectionId === section.id ? "is-active" : ""} onClick={() => setAssetSectionId(section.id)} role="tab" aria-selected={activeAssetSectionId === section.id}>{section.label}</button>)}
                     </div>
-                    <AssetsBreakdownChart analyticsData={assets} selectedYear={displayedPeriod} assetScope={assetScope} />
+                    <AssetsBreakdownChart analyticsData={assets} selectedYear={displayedPeriod} sectionId={activeAssetSectionId} />
                 </section>
             ) : (
                 <section className="chart-panel" aria-label={`Liabilities for ${displayedPeriod}`}>
                     <div className="analytics-tabs balance-sheet-1a-tabs" role="tablist" aria-label="Liability sections">
-                        <button className={liabilityScope === "non-current" ? "is-active" : ""} onClick={() => setLiabilityScope("non-current")} role="tab" aria-selected={liabilityScope === "non-current"}>Non-current liabilities</button>
-                        <button className={liabilityScope === "current" ? "is-active" : ""} onClick={() => setLiabilityScope("current")} role="tab" aria-selected={liabilityScope === "current"}>Current liabilities</button>
+                        {liabilitySections.map(section => <button key={section.id} className={activeLiabilitySectionId === section.id ? "is-active" : ""} onClick={() => setLiabilitySectionId(section.id)} role="tab" aria-selected={activeLiabilitySectionId === section.id}>{section.label}</button>)}
                     </div>
-                    <LiabilitiesBreakdownChart analyticsData={liabilities} selectedYear={displayedPeriod} liabilityScope={liabilityScope} />
+                    <LiabilitiesBreakdownChart analyticsData={liabilities} selectedYear={displayedPeriod} sectionId={activeLiabilitySectionId} />
                 </section>
             )}
         </section>
