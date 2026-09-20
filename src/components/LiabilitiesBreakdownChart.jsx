@@ -2,7 +2,20 @@ import { memo } from "react";
 import ReactECharts from "echarts-for-react";
 import { displayLabel, getValidYears, isPieComponent, numericValue } from "../utils/analyticsData";
 
-function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
+const RING_COLORS = [
+    "#2b6f9f",
+    "#d94d4d",
+    "#ebc95d",
+    "#d48a4d",
+    "#7a9d7e",
+    "#9f6a5d",
+    "#6d7fbf",
+    "#5a9ca7",
+    "#c69362",
+    "#aa7c9c",
+];
+
+function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null, liabilityScope = "current" }) {
     if (!analyticsData?.dataset) {
         return <p>No liabilities data available to display.</p>;
     }
@@ -10,105 +23,114 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     const validYears = getValidYears(analyticsData);
     const latestYear = selectedYear ?? validYears[0];
 
-    const dataset = analyticsData.dataset;
+    function matchesLiabilitySection(value) {
+        const normalizedSection = displayLabel(value)
+            .replace(/\s+/g, " ")
+            .trim()
+            .toLowerCase();
 
-    console.log("[LIABILITIES PIE] dataset", dataset);
-    console.log("[Liabilities Breakdown] selected year:", latestYear);
+        if (liabilityScope === "current") {
+            return /\bcurrent\s+liabilities?\b/.test(normalizedSection) && !/\bnon[- ]?current\s+liabilities?\b/.test(normalizedSection);
+        }
 
-    const pieRows = dataset.filter(isPieComponent);
-    const labelCounts = pieRows.reduce((counts, row) => {
-        const label = displayLabel(row.label);
-        counts.set(label, (counts.get(label) ?? 0) + 1);
-        return counts;
-    }, new Map());
+        return /\bnon[- ]?current\s+liabilities?\b/.test(normalizedSection);
+    }
 
-    console.log("[LIABILITIES PIE] component rows", pieRows);
-    console.log(
-        "[LIABILITIES PIE] excluded totals",
-        dataset.filter(row => row?.role === "sectionTotal" || row?.role === "statementTotal")
-    );
+    function getRowValue(row) {
+        const values = row.values ?? {};
+        const matchingYear = Object.keys(values).find(year => String(year) === String(latestYear))
+            ?? Object.keys(values).find(year => String(year).includes(String(latestYear ?? "")));
+        return numericValue(values[matchingYear]);
+    }
 
-    const chartData = pieRows
-        .map(row => {
-            const baseName = displayLabel(row.label);
-            const sectionName = displayLabel(row.section ?? row.sourceSection);
-
-            return {
-                name: labelCounts.get(baseName) > 1 && sectionName
-                    ? `${baseName} (${sectionName})`
-                    : baseName,
-                value: numericValue(row.values?.[latestYear]),
-            };
-        })
-        .filter(item => Number.isFinite(item.value) && item.value > 0);
+    const chartData = analyticsData.dataset
+        .filter(row => isPieComponent(row) || row?.role === "tax")
+        .filter(row => [row.section, row.sourceSection, row.sourceRowSection]
+            .filter(Boolean)
+            .some(matchesLiabilitySection))
+        .map(row => ({
+            name: displayLabel(row.label),
+            rawValue: getRowValue(row),
+            section: displayLabel(row.section ?? row.sourceSection ?? "Other liabilities"),
+        }))
+        .filter(item => item.name && Number.isFinite(item.rawValue))
+        .map(item => ({
+            ...item,
+            value: Math.abs(item.rawValue),
+        }))
+        .map((item, index) => ({
+            ...item,
+            shortName: item.name.length > 18 ? `${item.name.slice(0, 15)}...` : item.name,
+            itemStyle: { color: RING_COLORS[index % RING_COLORS.length] },
+        }));
 
     if (chartData.length === 0) {
         return <p>No positive liability values available for {latestYear}.</p>;
     }
 
     const option = {
-        title: {
-            text: `Liabilities Breakdown - ${latestYear ?? "Latest"}`,
-            left: "center",
-        },
         tooltip: {
             trigger: "item",
-            formatter: params => `${params.name}<br/>${Number(params.value).toLocaleString()} (${params.percent}%)`,
+            formatter: params => `${params.data.name}<br/>${Number(params.data.rawValue).toLocaleString()} (${params.percent}%)`,
         },
         legend: {
-            orient: "vertical",
-            left: 20,
-            top: "middle",
             type: "scroll",
-            height: 260,
-            width: 290,
-            itemGap: 10,
-            formatter: value => {
-                const item = chartData.find(chartItem => chartItem.name === value);
-                return item ? `${displayLabel(value)}: ${Number(item.value).toLocaleString()}` : displayLabel(value);
+            orient: "vertical",
+            left: 0,
+            top: "middle",
+            bottom: 24,
+            width: "34%",
+            itemWidth: 12,
+            itemHeight: 12,
+            itemGap: 12,
+            textStyle: {
+                color: "#2d3a46",
+                fontSize: 11,
             },
-            textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
+            data: chartData.map(item => item.name),
+            formatter: value => value,
         },
         series: [
             {
-                name: `Liabilities ${latestYear ?? "Latest"}`,
                 type: "pie",
-                radius: ["35%", "68%"],
-                center: ["70%", "55%"],
+                center: ["58%", "55%"],
+                radius: ["26%", "72%"],
+                startAngle: 90,
+                clockwise: true,
                 data: chartData,
-                itemStyle: { borderColor: "#ffffff", borderWidth: 2 },
-                emphasis: {
-                    itemStyle: {
-                        shadowBlur: 10,
-                        shadowOffsetX: 0,
-                    },
+                itemStyle: {
+                    borderColor: "#f4f1ee",
+                    borderWidth: 2,
                 },
                 label: {
-                    show: false,
+                    show: true,
+                    position: "inside",
+                    color: "#fff",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    formatter: params => params.data.value > 0 ? params.data.shortName : "",
+                },
+                labelLine: { show: false },
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 12,
+                        shadowColor: "rgba(0, 0, 0, 0.18)",
+                    },
                 },
             },
         ],
-        media: [{
-            query: { maxWidth: 700 },
-            option: {
-                title: { left: 12, top: 12, text: "Liabilities breakdown", textStyle: { fontSize: 14 } },
-                legend: { left: 12, right: 12, top: "60%", width: undefined, height: 150, orient: "vertical", type: "scroll", itemGap: 6, textStyle: { fontSize: 10, width: 250 } },
-                series: [{ center: ["50%", "34%"], radius: ["23%", "43%"] }],
-            },
-        }],
     };
 
     return (
         <div className="assets-chart">
             <ReactECharts
                 option={option}
-                style={{ height: "600px", width: "100%" }}
+                style={{ height: "520px", width: "100%" }}
                 notMerge={true}
                 lazyUpdate={false}
             />
         </div>
     );
-
 }
 
 export default memo(LiabilitiesBreakdownChart);

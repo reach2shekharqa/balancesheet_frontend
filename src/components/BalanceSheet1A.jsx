@@ -11,6 +11,8 @@ function BalanceSheet1A({ assets, liabilities, profitLoss, keyMetrics, loading =
     const periods = deriveFinancialPeriods(assets, liabilities);
     const [selectedPeriod, setSelectedPeriod] = useState(null);
     const [activeView, setActiveView] = useState("comparison");
+    const [assetScope, setAssetScope] = useState("current");
+    const [liabilityScope, setLiabilityScope] = useState("current");
     const displayedPeriod = periods.includes(selectedPeriod) ? selectedPeriod : periods[0] ?? null;
 
     if (loading) {
@@ -47,11 +49,19 @@ function BalanceSheet1A({ assets, liabilities, profitLoss, keyMetrics, loading =
                 </section>
             ) : activeView === "assets" ? (
                 <section className="chart-panel" aria-label={`Assets for ${displayedPeriod}`}>
-                    <AssetsBreakdownChart analyticsData={assets} selectedYear={displayedPeriod} />
+                    <div className="analytics-tabs balance-sheet-1a-tabs" role="tablist" aria-label="Asset sections">
+                        <button className={assetScope === "non-current" ? "is-active" : ""} onClick={() => setAssetScope("non-current")} role="tab" aria-selected={assetScope === "non-current"}>Non-current assets</button>
+                        <button className={assetScope === "current" ? "is-active" : ""} onClick={() => setAssetScope("current")} role="tab" aria-selected={assetScope === "current"}>Current assets</button>
+                    </div>
+                    <AssetsBreakdownChart analyticsData={assets} selectedYear={displayedPeriod} assetScope={assetScope} />
                 </section>
             ) : (
                 <section className="chart-panel" aria-label={`Liabilities for ${displayedPeriod}`}>
-                    <LiabilitiesBreakdownChart analyticsData={liabilities} selectedYear={displayedPeriod} />
+                    <div className="analytics-tabs balance-sheet-1a-tabs" role="tablist" aria-label="Liability sections">
+                        <button className={liabilityScope === "non-current" ? "is-active" : ""} onClick={() => setLiabilityScope("non-current")} role="tab" aria-selected={liabilityScope === "non-current"}>Non-current liabilities</button>
+                        <button className={liabilityScope === "current" ? "is-active" : ""} onClick={() => setLiabilityScope("current")} role="tab" aria-selected={liabilityScope === "current"}>Current liabilities</button>
+                    </div>
+                    <LiabilitiesBreakdownChart analyticsData={liabilities} selectedYear={displayedPeriod} liabilityScope={liabilityScope} />
                 </section>
             )}
         </section>
