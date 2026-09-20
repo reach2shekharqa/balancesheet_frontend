@@ -16,6 +16,11 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     console.log("[Liabilities Breakdown] selected year:", latestYear);
 
     const pieRows = dataset.filter(isPieComponent);
+    const labelCounts = pieRows.reduce((counts, row) => {
+        const label = displayLabel(row.label);
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+        return counts;
+    }, new Map());
 
     console.log("[LIABILITIES PIE] component rows", pieRows);
     console.log(
@@ -24,10 +29,17 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
     );
 
     const chartData = pieRows
-        .map(row => ({
-            name: displayLabel(row.label),
-            value: numericValue(row.values?.[latestYear]),
-        }))
+        .map(row => {
+            const baseName = displayLabel(row.label);
+            const sectionName = displayLabel(row.section ?? row.sourceSection);
+
+            return {
+                name: labelCounts.get(baseName) > 1 && sectionName
+                    ? `${baseName} (${sectionName})`
+                    : baseName,
+                value: numericValue(row.values?.[latestYear]),
+            };
+        })
         .filter(item => Number.isFinite(item.value) && item.value > 0);
 
     if (chartData.length === 0) {
@@ -41,6 +53,7 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
         },
         tooltip: {
             trigger: "item",
+            formatter: params => `${params.name}<br/>${Number(params.value).toLocaleString()} (${params.percent}%)`,
         },
         legend: {
             orient: "vertical",
@@ -50,7 +63,10 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
             height: 260,
             width: 290,
             itemGap: 10,
-            formatter: value => displayLabel(value),
+            formatter: value => {
+                const item = chartData.find(chartItem => chartItem.name === value);
+                return item ? `${displayLabel(value)}: ${Number(item.value).toLocaleString()}` : displayLabel(value);
+            },
             textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
         series: [
@@ -92,6 +108,7 @@ function LiabilitiesBreakdownChart({ analyticsData, selectedYear = null }) {
             />
         </div>
     );
+
 }
 
 export default memo(LiabilitiesBreakdownChart);

@@ -88,7 +88,10 @@ function ProfitLossExpensesChart({ analyticsData, selectedYear = null }) {
             height: 260,
             width: 290,
             itemGap: 10,
-            formatter: value => displayLabel(value),
+            formatter: value => {
+                const item = chartData.find(chartItem => chartItem.name === value);
+                return item ? `${displayLabel(value)}: ${Number(item.value).toLocaleString()}` : displayLabel(value);
+            },
             textStyle: { color: "#4e5d6b", fontSize: 12, width: 250, overflow: "truncate", ellipsis: "..." },
         },
         series: [{
